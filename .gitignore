@@ -1,0 +1,13 @@
+# Banco de dados real — contém dados pessoais e senhas; migre manualmente
+sgf_dados.json
+sgf_dados.json.bak
+*.db
+backups/
+
+# Segredos e logs
+secret.key
+*.log
+
+# Python
+__pycache__/
+venv/
