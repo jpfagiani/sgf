@@ -21,25 +21,32 @@ else
     echo "[1/5] python3 OK ($(python3 --version))"
 fi
 
-echo "[2/5] Copiando arquivos para $DEST ..."
+SRC="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$DEST"
-cp -f servidor.py run_sgf.py index.html logo.png logo_pp.png backup.sh "$DEST/"
-chmod +x "$DEST/backup.sh"
+if [ "$(realpath "$SRC")" = "$(realpath "$DEST")" ]; then
+    # Repositório clonado direto em /opt/sgf: nada a copiar
+    echo "[2/5] Instalando a partir do próprio $DEST (cópia dispensada)."
+else
+    echo "[2/5] Copiando arquivos para $DEST ..."
+    cp -f "$SRC"/servidor.py "$SRC"/run_sgf.py "$SRC"/index.html \
+          "$SRC"/logo.png "$SRC"/logo_pp.png "$SRC"/backup.sh "$DEST/"
 
-# Migração de dados: se houver um sgf_dados.json ao lado do instalador
-# e ainda não existir banco no destino, ele é aproveitado.
-# NUNCA sobrescreve um banco já existente.
-if [ -f sgf_dados.json ] && [ ! -f "$DEST/sgf_dados.json" ]; then
-    echo "      -> banco sgf_dados.json encontrado, migrando."
-    cp sgf_dados.json "$DEST/"
+    # Migração de dados: se houver um sgf_dados.json ao lado do instalador
+    # e ainda não existir banco no destino, ele é aproveitado.
+    # NUNCA sobrescreve um banco já existente.
+    if [ -f "$SRC/sgf_dados.json" ] && [ ! -f "$DEST/sgf_dados.json" ]; then
+        echo "      -> banco sgf_dados.json encontrado, migrando."
+        cp "$SRC/sgf_dados.json" "$DEST/"
+    fi
 fi
+chmod +x "$DEST/backup.sh"
 
 echo "[3/5] Criando usuário de serviço 'sgf' ..."
 id -u sgf >/dev/null 2>&1 || useradd --system --home "$DEST" --shell /usr/sbin/nologin sgf
 chown -R sgf:sgf "$DEST"
 
 echo "[4/5] Instalando serviço systemd (porta $PORT) ..."
-sed "s|@PORT@|$PORT|" sgf.service > /etc/systemd/system/sgf.service
+sed "s|@PORT@|$PORT|" "$SRC/sgf.service" > /etc/systemd/system/sgf.service
 systemctl daemon-reload
 systemctl enable --now sgf.service
 
