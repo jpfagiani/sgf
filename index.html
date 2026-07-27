@@ -884,6 +884,7 @@
         .custom-toast.toast-success { border-left-color: var(--success); }
         .custom-toast.toast-error { border-left-color: var(--danger); }
         .custom-toast.toast-warning { border-left-color: var(--accent); }
+        .custom-toast.toast-info { border-left-color: var(--primary); }
 
         @keyframes toast-slide-in {
             from { transform: translateX(120%); opacity: 0; }
@@ -1463,9 +1464,6 @@
                     <button class="tab-button" onclick="switchTab('tab-mapa-forca')">
                         <i class="fa-solid fa-shield-halved"></i> Mapa Força
                     </button>
-                    <button class="tab-button" onclick="switchTab('tab-romaneios')">
-                        <i class="fa-solid fa-envelope-open-text"></i> Envio de Romaneio
-                    </button>
                 </div>
             </div>
 
@@ -1528,6 +1526,19 @@
                     </button>
                     <button class="tab-button" onclick="switchTab('tab-pagamentos')">
                         <i class="fa-solid fa-file-invoice-dollar"></i> Controle Pagamentos
+                    </button>
+                </div>
+            </div>
+
+            <!-- CATEGORIA 5: GESTÃO DE DOCUMENTOS -->
+            <div class="menu-category">
+                <button type="button" class="menu-header-button" onclick="toggleSubmenu('submenu-documentos')">
+                    <span><i class="fa-solid fa-folder-tree"></i> Gestão de Documentos</span>
+                    <i class="fa-solid fa-chevron-down arrow-icon"></i>
+                </button>
+                <div id="submenu-documentos" class="submenu-container">
+                    <button class="tab-button" onclick="switchTab('tab-romaneios')">
+                        <i class="fa-solid fa-envelope-open-text"></i> Envio de Romaneio
                     </button>
                 </div>
             </div>
@@ -3756,6 +3767,8 @@
     function salvarDados(dados) {
         if (!dados.versao) dados.versao = 0;
         dados.versao++;
+        dados.modificadoEm = Date.now();
+        dados.modificadoPor = (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? (usuarioLogado.login || usuarioLogado.nome || '') : '';
         const revEl = document.getElementById('sgf-rev-count');
         if (revEl) revEl.innerText = `SGF v1.0.${dados.versao}`;
 
@@ -3771,6 +3784,66 @@
         }
         // Grava no arquivo fisicamente
         gravarArquivoLocal(dados);
+    }
+
+    // --- SINCRONIZAÇÃO EM TEMPO REAL (multiusuário) ---
+    // No modo servidor, consulta o /api/dados periodicamente; se outro usuário
+    // gravou uma versão mais nova, atualiza a memória e re-renderiza as telas
+    // sem precisar de F5. Formulários em digitação não são tocados.
+    let sgfSyncTimer = null;
+
+    function iniciarSincronizacaoTempoReal() {
+        if (!window.location.protocol.startsWith('http')) return; // só faz sentido no modo servidor
+        if (sgfSyncTimer) return;
+        sgfSyncTimer = setInterval(verificarAtualizacoesRemotas, 5000);
+    }
+
+    async function verificarAtualizacoesRemotas() {
+        if (document.hidden) return;                 // aba em segundo plano
+        if (!usuarioLogado) return;                  // sessão encerrada
+        if (!window.SGF_DADOS) return;
+        try {
+            const resp = await fetch('/api/dados', { cache: 'no-store' });
+            if (!resp.ok) return;
+            let remoto = await resp.json();
+            const localVer  = window.SGF_DADOS.versao || 0;
+            const remotoVer = remoto.versao || 0;
+            // Só aceita dados iguais ou mais novos que os locais — nunca regride
+            // (um POST nosso em trânsito deixaria o remoto momentaneamente atrás)
+            const mudou = remotoVer > localVer ||
+                (remotoVer === localVer && (remoto.modificadoEm || null) !== (window.SGF_DADOS.modificadoEm || null));
+            if (!mudou) return;
+            remoto = realizarMigracao(remoto);
+            window.SGF_DADOS = remoto;
+            const revEl = document.getElementById('sgf-rev-count');
+            if (revEl) revEl.innerText = `SGF v1.0.${remotoVer}`;
+            atualizarInterfaceAposSync(remoto);
+            const quem = remoto.modificadoPor ? ` por ${remoto.modificadoPor}` : '';
+            showToast(`Dados atualizados${quem}.`, 'info');
+        } catch (e) {
+            // Servidor temporariamente inacessível: tenta de novo no próximo ciclo
+        }
+    }
+
+    function atualizarInterfaceAposSync(dados) {
+        // Lookup por nome no window: função inexistente é só pulada,
+        // sem derrubar a atualização das demais telas.
+        const fns = [
+            'atualizarDropdownsFCT', 'atualizarDropdownsCheck', 'atualizarDropdownsMapaForca',
+            'atualizarVisualGeral', 'carregarViaturasNaTabela', 'carregarMotoristasNaTabela',
+            'carregarServidoresNaTabela', 'carregarViagensNaTabela', 'carregarHistoricoVezNaTabela',
+            'carregarMapaForcaNaTabela', 'carregarChecksNaTabela', 'atualizarDropdownOleo',
+            'carregarTabelaOleo', 'carregarTabelaManutencao', 'atualizarDropdownViaturaManutencao',
+            'atualizarDropdownAbastecimentos', 'carregarTabelaAbastecimentos', 'carregarTabelaPagamentos',
+            'carregarServicosNaTabela', 'renderizarProspeccao', 'renderizarRelatorioAbastecimentos',
+            'carregarTabelaUsuarios', 'carregarHistoricoRomaneios'
+        ];
+        fns.forEach(nome => {
+            try {
+                const fn = window[nome];
+                if (typeof fn === 'function') fn(dados);
+            } catch (e) { console.error('Sync: erro ao atualizar', nome, e); }
+        });
     }
 
     function getAtivos(dados) {
@@ -9237,14 +9310,21 @@ function carregarTabelaOleo(dados) {
         try { carregarViaturasNaTabela(dados); } catch(e) { console.error(e); }
         try { carregarMotoristasNaTabela(dados); } catch(e) { console.error(e); }
         try { carregarServidoresNaTabela(dados); } catch(e) { console.error(e); }
-        try { carregarHistorico(dados); } catch(e) { console.error(e); }
-        try { atualizarDropdownViaturaOleo(dados); } catch(e) { console.error(e); }
+        try { carregarViagensNaTabela(dados); } catch(e) { console.error(e); }
+        try { atualizarDropdownOleo(dados); } catch(e) { console.error(e); }
         try { carregarTabelaOleo(dados); } catch(e) { console.error(e); }
-        try { atualizarDropdownViaturaAbastecimento(dados); } catch(e) { console.error(e); }
+        try { atualizarDropdownAbastecimentos(dados); } catch(e) { console.error(e); }
         try { carregarServicosNaTabela(dados); } catch(e) { console.error(e); }
         try { renderizarProspeccao(dados); } catch(e) { console.error(e); }
         try { carregarTabelaUsuarios(dados); } catch(e) { console.error(e); }
+        try { carregarHistoricoRomaneios(); } catch(e) { console.error(e); }
+        try { renderizarTabelaItensRomaneio(); } catch(e) { console.error(e); }
+        try {
+            const rn = document.getElementById('romNum');
+            if (rn && !rn.value) rn.value = calcularProximoNumeroRomaneio();
+        } catch(e) { console.error(e); }
         try { atualizarVisualGeral(dados); } catch(e) { console.error(e); }
+        try { iniciarSincronizacaoTempoReal(); } catch(e) { console.error(e); }
 
         console.log("SGF Login: Interface carregada. Chamando alertas de inicialização...");
         try {
