@@ -1800,6 +1800,10 @@
                     <label>PARA. (Destinatário) *</label>
                     <input type="text" id="romPara" value="COORDENADORIA DE EXECUÇÕES PENAIS DA REGIÃO OESTE - INFRAESTRUTURA" required>
                 </div>
+                <div class="form-group">
+                    <label>Anexar Romaneio Digitalizado (PDF ou imagem — opcional)</label>
+                    <input type="file" id="romAnexo" accept="image/*,application/pdf" style="padding: 8px; border: 1px dashed var(--border);">
+                </div>
             </div>
 
             <h4 style="margin-top:20px; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:5px;">Adicionar Remessas ao Romaneio</h4>
@@ -6907,12 +6911,32 @@
         renderizarTabelaItensRomaneio();
     }
 
-    function salvarRomaneio(e) {
+    async function salvarRomaneio(e) {
         if (e) e.preventDefault();
-        
+
         if (romaneioAtualItens.length === 0) {
             showToast('Adicione pelo menos uma remessa antes de salvar.', 'error');
             return;
+        }
+
+        // Anexo (mesmo mecanismo da Ordem de Serviço da manutenção)
+        const fileInput = document.getElementById('romAnexo');
+        let anexoBase64 = null;
+        let anexoType = null;
+        if (fileInput && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            anexoType = file.type;
+            try {
+                anexoBase64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                });
+            } catch (err) {
+                showToast('Erro ao ler o arquivo anexado.', 'error');
+                return;
+            }
         }
 
         const romaneio = {
@@ -6924,17 +6948,24 @@
             remetente: document.getElementById('romDo').value.trim(),
             destinatario: document.getElementById('romPara').value.trim(),
             responsavel: (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? (usuarioLogado.nome || usuarioLogado.login) : '',
-            itens: [...romaneioAtualItens]
+            itens: [...romaneioAtualItens],
+            anexoBase64,
+            anexoType
         };
 
         const dados = carregarDados();
-        
+
         if (romaneioEmEdicaoId) {
             const index = dados.romaneios.findIndex(r => r.id === romaneioEmEdicaoId);
             if (index > -1) {
                 // Manter ID e Data originais
                 romaneio.id = dados.romaneios[index].id;
                 romaneio.data = dados.romaneios[index].data;
+                // Sem arquivo novo na edição: mantém o anexo que já existia
+                if (!anexoBase64) {
+                    romaneio.anexoBase64 = dados.romaneios[index].anexoBase64 || null;
+                    romaneio.anexoType = dados.romaneios[index].anexoType || null;
+                }
                 dados.romaneios[index] = romaneio;
                 showToast('Romaneio atualizado com sucesso!', 'success');
             } else {
@@ -6960,6 +6991,8 @@
         document.getElementById('romNum').value = calcularProximoNumeroRomaneio();
         document.getElementById('romMalote').value = '';
         document.getElementById('romLacre').value = '';
+        const anexoInput = document.getElementById('romAnexo');
+        if (anexoInput) anexoInput.value = '';
         romaneioAtualItens = [];
         romaneioEmEdicaoId = null;
         renderizarTabelaItensRomaneio();
@@ -6980,6 +7013,11 @@
         lista.forEach(rom => {
             const dataF = rom.data.split('-').reverse().join('/');
             const tr = document.createElement('tr');
+            const btnAnexo = rom.anexoBase64
+                ? `<button class="btn-action" onclick="visualizarAnexoRomaneio('${rom.id}')" style="background:var(--secondary); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:5px;" title="Ver Romaneio Digitalizado">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </button>`
+                : '';
             tr.innerHTML = `
                 <td>${dataF}</td>
                 <td style="font-weight:bold;">${rom.numero}</td>
@@ -6987,7 +7025,7 @@
                 <td><span title="${rom.destinatario}">${rom.destinatario.substring(0, 30)}...</span></td>
                 <td style="text-align:center;">${rom.itens.length}</td>
                 <td style="text-align:center; white-space:nowrap;">
-                    <button class="btn-action" onclick="imprimirRomaneio('${rom.id}', false, false)" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;" title="Visualizar">
+                    ${btnAnexo}<button class="btn-action" onclick="imprimirRomaneio('${rom.id}', false, false)" style="background:var(--accent); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;" title="Visualizar">
                         <i class="fa-solid fa-eye"></i>
                     </button>
                     <button class="btn-action" onclick="imprimirRomaneio('${rom.id}', false, true)" style="background:var(--primary); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-left:5px;" title="Imprimir">
@@ -8684,15 +8722,18 @@ function carregarTabelaOleo(dados) {
         }
 
         [...dados.manutencoes].reverse().forEach(m => {
-            const statusHtml = m.pago 
-                ? '<span class="badge-success">PAGO</span>' 
+            const statusHtml = m.pago
+                ? '<span class="badge-success">PAGO</span>'
                 : '<span class="badge-danger">PENDENTE</span>';
-                
+
             const tr = document.createElement('tr');
             const btnOs = m.osBase64 ? `<button class="btn-icon" style="color:var(--primary);" onclick="visualizarOS('${m.id}')" title="Ver Ordem de Serviço"><i class="fa-solid fa-file-invoice"></i></button>` : '';
 
+            // Data vem do input type=date (AAAA-MM-DD) — exibe como DD/MM/AAAA
+            const dataBR = (m.data && m.data.includes('-')) ? m.data.split('-').reverse().join('/') : m.data;
+
             tr.innerHTML = `
-                <td>${m.data}</td>
+                <td>${dataBR}</td>
                 <td style="max-width: 200px; white-space: normal; word-wrap: break-word;"><strong>${m.titulo}</strong><br><span style="font-size:11px; color:#666;">${m.descricao}</span></td>
                 <td><span class="badge-info">${m.viatura}</span></td>
                 <td style="max-width: 150px; white-space: normal; word-wrap: break-word;">${m.oficina}</td>
@@ -9630,6 +9671,23 @@ function carregarTabelaOleo(dados) {
     window.fecharModalOS = function() {
         document.getElementById('modal-os').style.display = 'none';
         document.getElementById('modal-os-body').innerHTML = ''; // Limpa memória
+    }
+
+    // Anexo do romaneio: mesmo visualizador da Ordem de Serviço da manutenção
+    window.visualizarAnexoRomaneio = function(id) {
+        const dados = carregarDados();
+        const rom = (dados.romaneios || []).find(r => r.id === id);
+        if (!rom || !rom.anexoBase64) {
+            showToast('Este romaneio não tem arquivo anexado.', 'error');
+            return;
+        }
+        const body = document.getElementById('modal-os-body');
+        if (rom.anexoType && rom.anexoType.includes('pdf')) {
+            body.innerHTML = `<embed src="${rom.anexoBase64}" width="100%" height="600px" type="application/pdf">`;
+        } else {
+            body.innerHTML = `<img src="${rom.anexoBase64}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">`;
+        }
+        document.getElementById('modal-os').style.display = 'flex';
     }
 
     window.onload = function() {
