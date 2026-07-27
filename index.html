@@ -7014,7 +7014,7 @@
             const dataF = rom.data.split('-').reverse().join('/');
             const tr = document.createElement('tr');
             const btnAnexo = rom.anexoBase64
-                ? `<button class="btn-action" onclick="visualizarAnexoRomaneio('${rom.id}')" style="background:var(--secondary); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:5px;" title="Ver Cópia Romaneio">
+                ? `<button class="btn-action" onclick="visualizarAnexoRomaneio('${rom.id}')" style="background:var(--secondary); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; margin-right:5px;" title="Ver Romaneio">
                         <i class="fa-solid fa-file-invoice"></i>
                     </button>`
                 : '';
@@ -9684,7 +9684,7 @@ function carregarTabelaOleo(dados) {
             return;
         }
         const titulo = document.querySelector('#modal-os .modal-os-titulo');
-        if (titulo) titulo.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Cópia Romaneio';
+        if (titulo) titulo.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Romaneio';
         const body = document.getElementById('modal-os-body');
         if (rom.anexoType && rom.anexoType.includes('pdf')) {
             body.innerHTML = `<embed src="${rom.anexoBase64}" width="100%" height="600px" type="application/pdf">`;
