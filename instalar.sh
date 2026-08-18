@@ -83,7 +83,7 @@ if command -v nft >/dev/null 2>&1 && nft list tables 2>/dev/null | grep -q "inet
     echo
     echo "⚠  Firewall do Samba detectado nesta máquina (política padrão: bloquear)."
     echo "   Para a rede alcançar a porta $PORT, rode uma vez:"
-    echo "     cd /opt/smb && sudo bash bootstrap.sh"
+    echo "     cd /opt/smb && sudo bash scripts/atualizar_firewall.sh"
     echo "   (idempotente — não altera usuários, RAID nem dados já configurados)"
 fi
 

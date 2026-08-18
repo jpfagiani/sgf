@@ -26,15 +26,19 @@ portas, para não colidir:
 | **8091** | **SGF (este)** |
 
 Se a máquina já tem o firewall do Samba (`nftables`, política padrão de
-bloqueio), a porta do SGF só é liberada automaticamente quando o `bootstrap.sh`
-do Samba roda **depois** do SGF instalado — ele detecta o SGF sozinho. Se a
-ordem foi a outra (Samba primeiro, SGF depois), rode uma vez:
+bloqueio), a porta do SGF só é liberada automaticamente quando o Samba
+"redetecta" o que existe nesta máquina — o que não acontece sozinho se o SGF
+foi instalado **depois** do Samba. Rode uma vez:
 
 ```bash
-cd /opt/smb && sudo bash bootstrap.sh
+cd /opt/smb && sudo bash scripts/atualizar_firewall.sh
 ```
 
-É seguro re-executar — não mexe em usuários, RAID nem dados já configurados.
+Atualiza só o firewall (nftables/fail2ban) — não toca em usuários, RAID,
+Samba nem no portal. Se esse script ainda não existir no `/opt/smb` (versão
+mais antiga do repo), o caminho mais lento funciona igual:
+`cd /opt/smb && sudo bash bootstrap.sh` — só demora mais, porque reprocessa
+tudo.
 
 ## Instalação
 
