@@ -15,6 +15,17 @@ titulo(){ printf '\n\033[1;36m%s\033[0m\n' "$*"; }
 
 PENDENCIAS=0
 
+# A porta real só é conhecida enquanto a unit ainda existir (vem do
+# ExecStart, preenchido pelo instalador). Depois de removida não há como
+# saber qual foi escolhida — cai no padrão do projeto (8091), com aviso.
+PORTA_SGF=""
+PORTA_ORIGEM="padrão do projeto"
+if [ -f /etc/systemd/system/sgf.service ]; then
+    PORTA_SGF=$(grep -oP 'run_sgf\.py \K[0-9]+' /etc/systemd/system/sgf.service 2>/dev/null)
+    [ -n "$PORTA_SGF" ] && PORTA_ORIGEM="lida da unit ainda presente"
+fi
+PORTA_SGF="${PORTA_SGF:-8091}"
+
 titulo "1. Serviço do SGF"
 if systemctl list-unit-files 2>/dev/null | grep -q '^sgf\.service'; then
     falta "a unidade sgf.service ainda está registrada"
@@ -34,14 +45,19 @@ for arq in /etc/systemd/system/sgf.service /etc/cron.d/sgf-backup; do
     fi
 done
 
-titulo "2. Porta 80"
-EM_USO=$(ss -tlnp 2>/dev/null | grep ':80 ')
+titulo "2. Porta do SGF (${PORTA_SGF}, ${PORTA_ORIGEM})"
+EM_USO=$(ss -tlnp 2>/dev/null | grep ":${PORTA_SGF} ")
 if [ -n "$EM_USO" ]; then
-    falta "algo ainda escuta na porta 80:"
+    falta "algo ainda escuta na porta ${PORTA_SGF}:"
     echo "$EM_USO" | sed 's/^/         /'
     PENDENCIAS=$((PENDENCIAS+1))
 else
-    ok "porta 80 livre — pronta para o portal"
+    ok "porta ${PORTA_SGF} livre"
+fi
+if [ "$PORTA_ORIGEM" = "padrão do projeto" ]; then
+    aviso "não foi possível confirmar a porta real (unit já removida)."
+    aviso "se o SGF foi instalado em porta diferente de ${PORTA_SGF}, confira à mão:"
+    echo  "         ss -tlnp | grep LISTEN"
 fi
 
 titulo "3. Usuário de serviço"
@@ -98,7 +114,7 @@ else
 fi
 
 titulo "5. Serviços que devem CONTINUAR no ar"
-for par in "smbd:compartilhamento Samba" "nginx:painel do Samba" "cdpni-portal:portal de administração"; do
+for par in "smbd:compartilhamento Samba" "nginx:servidor web (portal-samba)" "portal-samba:portal de administração do Samba"; do
     svc="${par%%:*}"; desc="${par#*:}"
     if systemctl is-active "$svc" >/dev/null 2>&1; then
         ok "$svc ativo ($desc)"
@@ -109,8 +125,8 @@ done
 
 titulo "Resumo"
 if [ "$PENDENCIAS" -eq 0 ]; then
-    printf '  \033[32mLimpeza concluída. A porta 80 está livre para o portal.\033[0m\n'
-    echo  "  Instale com:  sudo ./instalar.sh"
+    printf '  \033[32mLimpeza concluída. A porta %s está livre.\033[0m\n' "$PORTA_SGF"
+    echo  "  Instale com:  sudo ./instalar.sh          (porta 8091 por padrão)"
 else
     printf '  \033[33m%d item(ns) ainda pendente(s) — veja as linhas [resta] acima.\033[0m\n' "$PENDENCIAS"
 fi
