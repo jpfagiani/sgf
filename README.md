@@ -11,15 +11,38 @@ arquivo JSON (`sgf_dados.json`).
 ## Requisitos
 
 - Debian 13 (trixie) — funciona em qualquer distro com Python 3
-- Porta 80 livre (ou informe outra porta na instalação)
+- Uma porta livre — **8091 por padrão**
+
+## Convivendo com GWOS, Samba e portal de sistemas na mesma máquina
+
+É comum o SGF dividir servidor com os outros projetos do CDPNI. Convenção de
+portas, para não colidir:
+
+| Porta | Sistema |
+|---|---|
+| 80 | portal-sistemas |
+| 8080 | painel do GWOS |
+| 8443 | portal-samba |
+| **8091** | **SGF (este)** |
+
+Se a máquina já tem o firewall do Samba (`nftables`, política padrão de
+bloqueio), a porta do SGF só é liberada automaticamente quando o `bootstrap.sh`
+do Samba roda **depois** do SGF instalado — ele detecta o SGF sozinho. Se a
+ordem foi a outra (Samba primeiro, SGF depois), rode uma vez:
+
+```bash
+cd /opt/smb && sudo bash bootstrap.sh
+```
+
+É seguro re-executar — não mexe em usuários, RAID nem dados já configurados.
 
 ## Instalação
 
 ```bash
 git clone https://github.com/jpfagiani/sgf.git
 cd sgf
-sudo ./instalar.sh          # porta 80
-# ou: sudo ./instalar.sh 8080
+sudo ./instalar.sh          # porta 8091 (padrão)
+# ou: sudo ./instalar.sh 80   # se esta máquina não tiver outro sistema nela
 ```
 
 O instalador:
@@ -30,7 +53,8 @@ O instalador:
 4. instala e ativa o serviço systemd `sgf` (sobe no boot, reinicia se cair);
 5. agenda backup diário do banco às 20h00 (`/opt/sgf/backups`, retém 30).
 
-Acesse `http://IP-DO-SERVIDOR` na rede local. No primeiro acesso, se não houver
+Acesse `http://IP-DO-SERVIDOR:8091` na rede local (ajuste a porta se instalou
+em outra). No primeiro acesso, se não houver
 banco, um padrão é criado com o usuário **master** / senha **123456** — troque a
 senha e cadastre os usuários reais em *Gerenciar Usuários*.
 
