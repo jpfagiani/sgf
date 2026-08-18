@@ -1613,6 +1613,11 @@
                         <option value="">Selecione...</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="fctAcompanhante">Acompanhante (opcional)</label>
+                    <input type="text" id="fctAcompanhante" list="fctAcompanhantesDatalist" placeholder="Selecione ou digite o nome...">
+                    <datalist id="fctAcompanhantesDatalist"></datalist>
+                </div>
             </div>
 
             <h3 class="form-section-title"><i class="fa-solid fa-car"></i> Viatura</h3>
@@ -3081,6 +3086,10 @@
                 <input type="text" id="edit-fct-motorista" required>
             </div>
             <div class="form-group">
+                <label>Acompanhante</label>
+                <input type="text" id="edit-fct-acompanhante" list="fctAcompanhantesDatalist">
+            </div>
+            <div class="form-group">
                 <label>Viatura *</label>
                 <input type="text" id="edit-fct-viatura" required>
             </div>
@@ -4271,6 +4280,19 @@
             sSelect.appendChild(opt);
         });
 
+        // Acompanhante — mesma fonte de sugestões (servidores) do Mapa Força.
+        const acompDatalist = document.getElementById('fctAcompanhantesDatalist');
+        if (acompDatalist) {
+            acompDatalist.innerHTML = '';
+            [...(dados.servidores || [])]
+                .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+                .forEach(sv => {
+                    const opt = document.createElement('option');
+                    opt.value = sv.nome;
+                    acompDatalist.appendChild(opt);
+                });
+        }
+
         vincularViaturaCampos();
         atualizarFctAuto(dados);
     }
@@ -4426,6 +4448,8 @@
         const dataBr = dataInput.split('-').reverse().join('/');
         const dados = carregarDados();
         const viaSelecionada = dados.viaturas[viaturaIdx];
+        const acompInput = document.getElementById('fctAcompanhante');
+        const acompanhante = acompInput ? acompInput.value.trim() : '';
 
         const novaViagem = {
             id: Date.now(),
@@ -4433,6 +4457,7 @@
             data: dataBr,
             dataChegada: dataChegadaBr,
             motorista: motorista,
+            acompanhante: acompanhante,
             veiculo: viaSelecionada.veiculo,
             modelo: viaSelecionada.modelo,
             placa: viaSelecionada.placa,
@@ -4901,6 +4926,7 @@
                 <td style="text-align: center; display: flex; gap: 4px; justify-content: center;">
                     ${btnEncerrar}
                     <button class="btn-icon" onclick="imprimirFCT(${v.id})" title="Imprimir FCT" style="color: var(--accent);"><i class="fa-solid fa-print"></i></button>
+                    <button class="btn-icon" onclick="imprimirOrdemSaida(${v.id})" title="Ordem de Saída de Viatura" style="color: var(--secondary);"><i class="fa-solid fa-right-from-bracket"></i></button>
                     <button class="btn-icon" onclick="abrirModalEditarViagemFCT(${v.id})" title="Editar"><i class="fa-solid fa-pen"></i></button>
                     <button class="btn-icon-danger" onclick="deletarViagemFCT(${v.id})" title="Excluir"><i class="fa-solid fa-trash"></i></button>
                 </td>
@@ -4981,6 +5007,7 @@
             inputDest.required = !!destinoVal;
         }
         document.getElementById('edit-fct-motorista').value = v.motorista || '';
+        document.getElementById('edit-fct-acompanhante').value = v.acompanhante || '';
         document.getElementById('edit-fct-viatura').value = v.veiculo || '';
         document.getElementById('edit-fct-modelo').value = v.modelo || '';
         document.getElementById('edit-fct-placa').value = v.placa || '';
@@ -5008,6 +5035,7 @@
         const servico = document.getElementById('edit-fct-servico').value.trim();
         const destino = document.getElementById('edit-fct-destino').value.trim();
         const motorista = document.getElementById('edit-fct-motorista').value.trim();
+        const acompanhante = document.getElementById('edit-fct-acompanhante').value.trim();
         const viatura = document.getElementById('edit-fct-viatura').value.trim();
         const modelo = document.getElementById('edit-fct-modelo').value.trim();
         const placa = document.getElementById('edit-fct-placa').value.trim().toUpperCase();
@@ -5049,6 +5077,7 @@
         dados.viagensFCT[idx].tipoServico = servico;
         dados.viagensFCT[idx].destino = destino;
         dados.viagensFCT[idx].motorista = motorista;
+        dados.viagensFCT[idx].acompanhante = acompanhante;
         dados.viagensFCT[idx].veiculo = viatura;
         dados.viagensFCT[idx].modelo = modelo;
         dados.viagensFCT[idx].placa = placa;
@@ -5829,6 +5858,14 @@
         const motFuncao = m.funcao || 'POLICIAL PENAL';
         const motUnidade = m.unidade || 'NÚCLEO DE SEGURANÇA';
 
+        // Acompanhante — busca o cargo em servidores (mesma fonte do datalist
+        // que sugere o nome), se o nome bater com algum cadastro.
+        const acompNome = (v.acompanhante || '').trim();
+        const acompCadastro = acompNome
+            ? (dados.servidores || []).find(sv => sv.nome.trim().toUpperCase() === acompNome.toUpperCase())
+            : null;
+        const acompFuncaoFCT = acompCadastro ? (acompCadastro.funcao || '') : '';
+
         // Buscar viatura
         const via = dados.viaturas.find(viatura => viatura.placa.trim().toUpperCase() === v.placa.trim().toUpperCase()) || {};
         let viaPatrimonio = via.patrimonio || '';
@@ -5849,12 +5886,15 @@
 
         let fuelRowsHtml = '';
         if (temAbastecimento) {
+            // Acumula por categoria em vez de sobrescrever: uma FCT pode ter mais
+            // de um abastecimento do mesmo combustível (parada intermediária,
+            // complemento etc.) — cada um precisa somar, não substituir o anterior.
             let fuelData = {
-                gasolina: { quant: '', valor: '', nf: '' },
-                diesel: { quant: '', valor: '', nf: '' },
-                etanol: { quant: '', valor: '', nf: '' },
-                aditivo: { quant: '', valor: '', nf: '' },
-                oleo: { quant: '', valor: '', nf: '' }
+                gasolina: { quant: 0, valor: 0, nfs: [] },
+                diesel: { quant: 0, valor: 0, nfs: [] },
+                etanol: { quant: 0, valor: 0, nfs: [] },
+                aditivo: { quant: 0, valor: 0, nfs: [] },
+                oleo: { quant: 0, valor: 0, nfs: [] }
             };
 
             absList.forEach(a => {
@@ -5867,10 +5907,17 @@
                 else if (comb.includes('OLEO') || comb.includes('ÓLEO')) cat = 'oleo';
 
                 if (cat) {
-                    fuelData[cat].quant = (parseFloat(a.litros) || 0).toFixed(3) + ' L';
-                    fuelData[cat].valor = (parseFloat(a.valorTotal) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    fuelData[cat].nf = a.nf || '';
+                    fuelData[cat].quant += (parseFloat(a.litros) || 0);
+                    fuelData[cat].valor += (parseFloat(a.valorTotal) || 0);
+                    if (a.nf) fuelData[cat].nfs.push(a.nf);
                 }
+            });
+
+            Object.keys(fuelData).forEach(cat => {
+                const d = fuelData[cat];
+                d.quantFmt = d.quant > 0 ? d.quant.toFixed(3) + ' L' : '';
+                d.valorFmt = d.quant > 0 ? d.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+                d.nfFmt = d.nfs.join(', ');
             });
 
             fuelRowsHtml = `
@@ -5888,33 +5935,33 @@
                         <tbody>
                             <tr>
                                 <td>GASOLINA</td>
-                                <td>${fuelData.gasolina.quant}</td>
-                                <td>${fuelData.gasolina.valor}</td>
-                                <td>${fuelData.gasolina.nf}</td>
+                                <td>${fuelData.gasolina.quantFmt}</td>
+                                <td>${fuelData.gasolina.valorFmt}</td>
+                                <td>${fuelData.gasolina.nfFmt}</td>
                             </tr>
                             <tr>
                                 <td>DIESEL</td>
-                                <td>${fuelData.diesel.quant}</td>
-                                <td>${fuelData.diesel.valor}</td>
-                                <td>${fuelData.diesel.nf}</td>
+                                <td>${fuelData.diesel.quantFmt}</td>
+                                <td>${fuelData.diesel.valorFmt}</td>
+                                <td>${fuelData.diesel.nfFmt}</td>
                             </tr>
                             <tr>
                                 <td>ÁLCOOL/ETANOL</td>
-                                <td>${fuelData.etanol.quant}</td>
-                                <td>${fuelData.etanol.valor}</td>
-                                <td>${fuelData.etanol.nf}</td>
+                                <td>${fuelData.etanol.quantFmt}</td>
+                                <td>${fuelData.etanol.valorFmt}</td>
+                                <td>${fuelData.etanol.nfFmt}</td>
                             </tr>
                             <tr>
                                 <td>ADITIVO</td>
-                                <td>${fuelData.aditivo.quant}</td>
-                                <td>${fuelData.aditivo.valor}</td>
-                                <td>${fuelData.aditivo.nf}</td>
+                                <td>${fuelData.aditivo.quantFmt}</td>
+                                <td>${fuelData.aditivo.valorFmt}</td>
+                                <td>${fuelData.aditivo.nfFmt}</td>
                             </tr>
                             <tr>
                                 <td>ÓLEO</td>
-                                <td>${fuelData.oleo.quant}</td>
-                                <td>${fuelData.oleo.valor}</td>
-                                <td>${fuelData.oleo.nf}</td>
+                                <td>${fuelData.oleo.quantFmt}</td>
+                                <td>${fuelData.oleo.valorFmt}</td>
+                                <td>${fuelData.oleo.nfFmt}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -6127,6 +6174,18 @@
                                     <span class="fct-field-value" style="text-align: center;">${motCnh}</span>
                                 </div>
                             </div>
+                            ${acompNome ? `
+                            <div class="fct-row">
+                                <div class="fct-field" style="flex: 2;">
+                                    <span class="fct-field-label">Acompanhante</span>
+                                    <span class="fct-field-value">${acompNome}</span>
+                                </div>
+                                <div class="fct-field">
+                                    <span class="fct-field-label">Função / Cargo</span>
+                                    <span class="fct-field-value">${acompFuncaoFCT}</span>
+                                </div>
+                            </div>
+                            ` : ''}
                             <div class="fct-row">
                                 <div class="fct-field">
                                     <span class="fct-field-label">Função / Cargo</span>
@@ -6337,7 +6396,198 @@
         const w = window.open('', '_blank');
         w.document.write(html);
         w.document.close();
-    }    // --- LÓGICA DO MAPA FORÇA ---
+    }
+
+    // Ordem de Saída de Viatura — autorização de saída física do veículo,
+    // documento separado da FCT (que registra o trâmite/roteiro da viagem).
+    // Reaproveita os mesmos dados já cadastrados na FCT: nada de formulário
+    // novo, só a impressão de um modelo diferente.
+    function imprimirOrdemSaida(id) {
+        const dados = carregarDados();
+        const v = dados.viagensFCT.find(viagem => viagem.id === id);
+        if (!v) {
+            showToast('Viagem não encontrada!', 'error');
+            return;
+        }
+
+        const m = dados.motoristas.find(mot => mot.nome.trim() === v.motorista.trim()) || {};
+        const motFuncao = m.funcao || 'POLICIAL PENAL';
+
+        const via = dados.viaturas.find(viatura => viatura.placa.trim().toUpperCase() === v.placa.trim().toUpperCase()) || {};
+        const viaDesc = (via.veiculo || via.modelo) ? `${via.veiculo || ''} ${via.modelo || ''}`.trim() : '#N/D';
+        const viaPatrimonio = via.patrimonio || '#N/D';
+
+        // Data por extenso (ex.: "sexta-feira, 14 de agosto de 2026"). Meio-dia
+        // fixo no horário evita a virada de dia por fuso ao converter para Date.
+        let dataExtenso = v.data || '';
+        const partesData = (v.data || '').split('/');
+        if (partesData.length === 3) {
+            const [dd, mm, yyyy] = partesData;
+            const dt = new Date(`${yyyy}-${mm}-${dd}T12:00:00`);
+            if (!isNaN(dt.getTime())) {
+                dataExtenso = dt.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            }
+        }
+
+        const acomp1 = (v.acompanhante || '').trim();
+
+        const html = `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <title>Ordem de Saída de Veículo - ${v.fct}</title>
+                <style>
+                    @page { size: portrait; margin: 1.2cm; }
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: Arial, sans-serif;
+                        color: #000;
+                        background: #fff;
+                        font-size: 13px;
+                        line-height: 1.5;
+                        margin: 0;
+                    }
+                    .osv-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        border-bottom: 2px solid #000;
+                        padding-bottom: 8px;
+                        margin-bottom: 4px;
+                    }
+                    .osv-header-text { font-size: 11px; font-weight: bold; line-height: 1.35; }
+                    .osv-header-text .maior { font-size: 13px; }
+                    .osv-logo { height: 46px; }
+                    .osv-title {
+                        text-align: center;
+                        font-size: 18px;
+                        font-weight: bold;
+                        letter-spacing: 0.5px;
+                        margin: 14px 0 18px;
+                        text-transform: uppercase;
+                    }
+                    .osv-texto { font-size: 14px; line-height: 2; margin-bottom: 6px; }
+                    .osv-campo {
+                        display: inline-block;
+                        min-width: 70px;
+                        border-bottom: 1px solid #000;
+                        font-weight: bold;
+                        text-align: center;
+                        padding: 0 4px;
+                    }
+                    .osv-destaque { background: #fff59d; font-weight: bold; padding: 1px 6px; }
+                    .osv-local-data {
+                        margin: 14px 0;
+                        font-weight: bold;
+                        border-top: 1px solid #000;
+                        border-bottom: 1px solid #000;
+                        padding: 6px 0;
+                    }
+                    .osv-acomp { margin: 14px 0; }
+                    .osv-acomp-linha {
+                        display: flex;
+                        gap: 8px;
+                        border-bottom: 1px solid #000;
+                        padding: 4px 2px;
+                        min-height: 20px;
+                    }
+                    .osv-acomp-linha b { flex-shrink: 0; }
+                    .osv-boxes {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 16px;
+                        margin-top: 26px;
+                    }
+                    .osv-box {
+                        border: 1px solid #000;
+                        padding: 12px;
+                        font-size: 12.5px;
+                    }
+                    .osv-box .osv-box-title {
+                        text-align: center;
+                        font-weight: bold;
+                        border-bottom: 1px solid #000;
+                        padding-bottom: 6px;
+                        margin-bottom: 10px;
+                    }
+                    .osv-box p { margin: 10px 0; }
+                    .osv-assinatura {
+                        margin-top: 34px;
+                        border-top: 1px solid #000;
+                        text-align: center;
+                        font-size: 11px;
+                        padding-top: 4px;
+                    }
+                    .osv-obs {
+                        margin-top: 22px;
+                        font-size: 12.5px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="osv-header">
+                    <div class="osv-header-text">
+                        <div class="maior">SECRETARIA DA ADMINISTRAÇÃO PENITENCIÁRIA</div>
+                        <div>Coordenadoria das Unidades Prisionais da Região Oeste do Estado</div>
+                        <div>CENTRO DE DETENÇÃO PROVISÓRIA DE NOVA INDEPENDÊNCIA</div>
+                    </div>
+                    <img src="logo.png" class="osv-logo" alt="Logo">
+                </div>
+
+                <div class="osv-title">Ordem de Saída de Veículo</div>
+
+                <div class="osv-texto">
+                    O veículo <span class="osv-campo">${viaDesc}</span>,
+                    placas <span class="osv-campo">${v.placa || '#N/D'}</span>,
+                    patrimônio <span class="osv-campo">${viaPatrimonio}</span>,<br>
+                    sob a responsabilidade do funcionário
+                    <span class="osv-campo" style="min-width: 220px;">${v.motorista || ''}</span>,
+                    cargo <span class="osv-campo">${motFuncao}</span>,<br>
+                    está autorizado a deixar a área deste estabelecimento para ir
+                    <span class="osv-destaque">${v.destino || ''}</span>
+                </div>
+
+                <div class="osv-local-data">
+                    NOVA INDEPENDÊNCIA/SP &nbsp;&nbsp; ${dataExtenso}
+                </div>
+
+                <div class="osv-acomp">
+                    <div class="osv-acomp-linha"><b>Acompanhante (1):</b> ${acomp1}</div>
+                    <div class="osv-acomp-linha"><b>Acompanhante (2):</b></div>
+                </div>
+
+                <div class="osv-boxes">
+                    <div class="osv-box">
+                        <p>SAÍDA EM ____/____/______</p>
+                        <p>HORÁRIO: ______________</p>
+                        <div class="osv-assinatura">Ass. Fun. Sub-Portaria</div>
+                    </div>
+                    <div class="osv-box">
+                        <div class="osv-box-title">Diretor Responsável</div>
+                        <p>RETORNO EM ____/____/______</p>
+                        <p>HORÁRIO: ______________</p>
+                        <div class="osv-assinatura">Ass. Fun. Sub-Portaria</div>
+                    </div>
+                </div>
+
+                <div class="osv-obs">
+                    Obs: Anexar ao controle de tráfego nº <span class="osv-destaque">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                </div>
+
+                <script>
+                    window.onload = () => { window.print(); };
+                <\/script>
+            </body>
+            </html>
+        `;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+    }
+
+    // --- LÓGICA DO MAPA FORÇA ---
     function atualizarDropdownsMapaForca(dados) {
         const viaturaSelect = document.getElementById('mapaViaturaSelect');
         viaturaSelect.innerHTML = '<option value="">Selecione...</option>';
