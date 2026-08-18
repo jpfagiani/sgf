@@ -457,6 +457,18 @@
             gap: 24px;
         }
 
+        /* Sem isto, uma coluna "1fr" do CSS Grid não encolhe além do conteúdo
+           que ela contém — por padrão o mínimo é "auto", não zero. Uma tabela
+           larga (Frota Ativa, Motoristas, Servidores...) força a coluna a
+           ficar mais larga que o espaço disponível, o grid extrapola o
+           .tab-content/.main-content (ambos com overflow:hidden) e o excesso
+           é cortado em silêncio — sem barra de rolagem, sem quebra de linha.
+           Com min-width:0 a coluna pode encolher, e a barra de rolagem do
+           próprio .table-wrapper (overflow-x:auto) passa a aparecer. */
+        .grid-layout > div {
+            min-width: 0;
+        }
+
         @media(min-width: 1024px) {
             .grid-layout.split-view {
                 grid-template-columns: 380px 1fr;
