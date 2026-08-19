@@ -1453,6 +1453,12 @@
                 <label>Senha</label>
                 <input type="password" id="loginPass" required style="width: 100%;" autocomplete="current-password">
             </div>
+            <!-- Aviso fixo dentro do card — não some sozinho como o toast do
+                 canto, que é fácil de perder nesta tela. Só desaparece numa
+                 nova tentativa de login. -->
+            <div id="login-error-msg" style="display: none; text-align: left; background: rgba(220,38,38,0.1); border: 1px solid var(--danger); color: var(--danger); padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;">
+                <i class="fa-solid fa-triangle-exclamation"></i> <span id="login-error-texto"></span>
+            </div>
             <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
 <button type="submit" class="btn-submit" style="margin-top: 8px;"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
 </div>
@@ -9675,8 +9681,19 @@ function carregarTabelaOleo(dados) {
         return btoa(unescape(encodeURIComponent(str)));
     }
 
+    function mostrarErroLogin(mensagem) {
+        const box = document.getElementById('login-error-msg');
+        document.getElementById('login-error-texto').textContent = mensagem;
+        box.style.display = 'block';
+        showToast(mensagem, 'error');
+    }
+
     function fazerLogin(event) {
         event.preventDefault();
+        // Some no início de cada nova tentativa — evita mostrar um erro
+        // antigo depois de um login bem-sucedido, se o usuário voltar aqui.
+        document.getElementById('login-error-msg').style.display = 'none';
+
         // Blindado com try/catch: qualquer erro inesperado (ex.: um
         // registro de usuário corrompido no banco) tem que aparecer como
         // aviso na tela — nunca falhar em silêncio, sem nada acontecer.
@@ -9690,11 +9707,11 @@ function carregarTabelaOleo(dados) {
             const user = dados.usuarios.find(u => u && typeof u.login === 'string' && u.login.toLowerCase() === loginInput.toLowerCase());
 
             if (!user) {
-                showToast('Usuário não encontrado!', 'error');
+                mostrarErroLogin('Usuário não encontrado!');
                 return;
             }
             if (user.senha !== senhaHash(passInput)) {
-                showToast('Senha incorreta!', 'error');
+                mostrarErroLogin('Senha incorreta!');
                 return;
             }
 
@@ -9702,7 +9719,7 @@ function carregarTabelaOleo(dados) {
             iniciarSistemaAutenticado(dados);
         } catch (e) {
             console.error('Erro ao processar login:', e);
-            showToast('Erro ao processar o login (veja o console, F12, para detalhes).', 'error');
+            mostrarErroLogin('Erro ao processar o login (veja o console, F12, para detalhes).');
         }
     }
 
