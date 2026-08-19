@@ -121,19 +121,17 @@
             margin-top: 12px; text-align: center; }
 
         .sidebar-nav {
-            flex: 1;
+            /* Sem flex-grow: o bloco só ocupa a altura das 5 categorias, em
+               vez de esticar e empurrar um vão em branco antes do
+               .sidebar-footer. O flex-shrink (padrão) continua ativo, então
+               em janelas baixas ele ainda encolhe e rola por conta do
+               overflow-y abaixo. */
+            flex: 0 1 auto;
             padding: 16px 12px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 8px;
-            /* Mesmo espaçamento do .sidebar-footer logo abaixo — categorias
-               e ações devem ler como um fluxo só, não duas áreas diferentes.
-               Rolagem fina e discreta — só aparece nos raros casos em que a
-               janela é baixa demais para as 5 categorias caberem inteiras.
-               A barra grossa com setas (padrão do Windows) era o sintoma
-               visível de quando o .sidebar-footer "roubava" a altura desta
-               área via margin-top:auto — removido junto com esta mudança. */
             scrollbar-width: thin;
             scrollbar-color: #bae6fd transparent;
         }
