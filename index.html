@@ -3631,7 +3631,7 @@
             abastecimentos: [],
             manutencoes: [],
             checksViatura: [],
-            usuarios: [{ login: "master", nome: "Administrador Master", senha: btoa("123456"), nivel: "Master" }],
+            usuarios: [{ login: "master", nome: "Administrador Master", senha: senhaHash("123456"), nivel: "Master" }],
             pos_sp: 0,
             pos_interior: 0,
             mapaForca: []
@@ -4144,7 +4144,7 @@
     function confirmarSenhaMaster() {
         const senha = document.getElementById('senha-master-input').value;
         const dados = carregarDados();
-        const masterOk = (dados.usuarios || []).some(u => u.nivel === 'Master' && u.senha === btoa(senha));
+        const masterOk = (dados.usuarios || []).some(u => u.nivel === 'Master' && u.senha === senhaHash(senha));
         if (!masterOk) {
             showToast('Senha de administrador master incorreta!', 'error');
             return;
@@ -9666,13 +9666,22 @@ function carregarTabelaOleo(dados) {
     // ==========================================
     let usuarioLogado = null;
 
+    // btoa() lança exceção para qualquer caractere fora do Latin1 (todo
+    // acento: ç, ã, é...) — uma senha assim travava o login/cadastro sem
+    // nenhum aviso na tela, porque o erro acontecia antes do showToast.
+    // encodeURIComponent+unescape converte para bytes que o btoa aceita.
+    // Senhas só em ASCII (ex.: "123456") geram o mesmo resultado de antes.
+    function senhaHash(str) {
+        return btoa(unescape(encodeURIComponent(str)));
+    }
+
     function fazerLogin(event) {
         event.preventDefault();
         const loginInput = document.getElementById('loginUser').value.trim();
         const passInput = document.getElementById('loginPass').value;
 
         const dados = carregarDados();
-        if(!dados.usuarios) dados.usuarios = [{ login: "master", nome: "Administrador Master", senha: btoa("123456"), nivel: "Master" }];
+        if(!dados.usuarios) dados.usuarios = [{ login: "master", nome: "Administrador Master", senha: senhaHash("123456"), nivel: "Master" }];
 
         const user = dados.usuarios.find(u => u.login.toLowerCase() === loginInput.toLowerCase());
 
@@ -9680,7 +9689,7 @@ function carregarTabelaOleo(dados) {
             showToast('Usuário não encontrado!', 'error');
             return;
         }
-        if (user.senha !== btoa(passInput)) {
+        if (user.senha !== senhaHash(passInput)) {
             showToast('Senha incorreta!', 'error');
             return;
         }
@@ -9931,12 +9940,12 @@ function carregarTabelaOleo(dados) {
             dados.usuarios[index].nome = nome;
             dados.usuarios[index].login = login;
             if (senha) {
-                dados.usuarios[index].senha = btoa(senha);
+                dados.usuarios[index].senha = senhaHash(senha);
             }
             dados.usuarios[index].nivel = nivel;
             dados.usuarios[index].permissoes = permissoes;
         } else {
-            dados.usuarios.push({ nome, login, senha: btoa(senha), nivel, permissoes });
+            dados.usuarios.push({ nome, login, senha: senhaHash(senha), nivel, permissoes });
         }
 
         salvarDados(dados);
