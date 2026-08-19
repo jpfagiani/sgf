@@ -4946,9 +4946,13 @@
             const displayHoraChegada = isAberta ? `<span style="color: var(--text-muted); font-style: italic;">Pendente</span>` : v.horaChegada;
             const displayTempoUso = isAberta ? `<span style="color: var(--text-muted); font-style: italic;">Pendente</span>` : v.tempoUso;
 
-            const btnEncerrar = isAberta 
+            // Reserva o espaço do botão mesmo quando ele não aparece (viagem
+            // já concluída) — senão os ícones seguintes (imprimir, ordem de
+            // saída, editar, excluir) deslizam para a esquerda e desalinham
+            // essa coluna entre uma linha e outra.
+            const btnEncerrar = isAberta
                 ? `<button class="btn-icon" onclick="abrirModalEncerrarFCT(${v.id})" title="Encerrar Viagem" style="color: var(--success);"><i class="fa-solid fa-flag-checkered"></i></button>`
-                : '';
+                : `<button class="btn-icon" style="visibility: hidden;" tabindex="-1" aria-hidden="true"><i class="fa-solid fa-flag-checkered"></i></button>`;
 
             tr.innerHTML = `
                 <td><strong>${v.fct}</strong> ${badgeStatus}</td>
