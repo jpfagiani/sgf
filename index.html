@@ -3011,6 +3011,29 @@
     </div>
 </div>
 
+<!-- Modal Senha de Administrador Master — usado para autorizar ações que
+     normalmente ficam bloqueadas (ex.: abrir 2ª FCT do mesmo veículo). -->
+<div id="modal-senha-master" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-title">
+            <i class="fa-solid fa-user-shield"></i> Autorização de Administrador Master
+        </div>
+        <div id="senha-master-msg" class="modal-body">
+            Esta ação exige a senha de um administrador master.
+        </div>
+        <div class="form-grid" style="grid-template-columns: 1fr; margin-top: 10px;">
+            <div class="form-group">
+                <label>Senha de Administrador Master</label>
+                <input type="password" id="senha-master-input" placeholder="Digite a senha">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="senha-master-cancel-btn" class="btn-cancel">Cancelar</button>
+            <button id="senha-master-confirm-btn" class="btn-submit">Autorizar</button>
+        </div>
+    </div>
+</div>
+
 
 
 <!-- Modal Edição Abastecimento -->
@@ -4101,6 +4124,42 @@
         closeConfirmModal();
     };
 
+    // --- SENHA DE ADMINISTRADOR MASTER (autorização de ações bloqueadas) ---
+    let senhaMasterCallback = null;
+
+    function pedirSenhaMaster(mensagem, onConfirm) {
+        document.getElementById('senha-master-msg').innerText = mensagem;
+        document.getElementById('senha-master-input').value = '';
+        document.getElementById('modal-senha-master').style.display = 'flex';
+        senhaMasterCallback = onConfirm;
+        setTimeout(() => document.getElementById('senha-master-input').focus(), 50);
+    }
+
+    function closeSenhaMasterModal() {
+        document.getElementById('modal-senha-master').style.display = 'none';
+        document.getElementById('senha-master-input').value = '';
+        senhaMasterCallback = null;
+    }
+
+    function confirmarSenhaMaster() {
+        const senha = document.getElementById('senha-master-input').value;
+        const dados = carregarDados();
+        const masterOk = (dados.usuarios || []).some(u => u.nivel === 'Master' && u.senha === btoa(senha));
+        if (!masterOk) {
+            showToast('Senha de administrador master incorreta!', 'error');
+            return;
+        }
+        const callback = senhaMasterCallback;
+        closeSenhaMasterModal();
+        if (callback) callback();
+    }
+
+    document.getElementById('senha-master-cancel-btn').onclick = closeSenhaMasterModal;
+    document.getElementById('senha-master-confirm-btn').onclick = confirmarSenhaMaster;
+    document.getElementById('senha-master-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); confirmarSenhaMaster(); }
+    });
+
     // --- FLUXO DE ABAS ---
     function toggleSubmenu(id) {
         const submenu = document.getElementById(id);
@@ -4491,62 +4550,81 @@
         const acompInput = document.getElementById('fctAcompanhante');
         const acompanhante = acompInput ? acompInput.value.trim() : '';
 
-        const novaViagem = {
-            id: Date.now(),
-            fct: fct.toUpperCase(),
-            data: dataBr,
-            dataChegada: dataChegadaBr,
-            motorista: motorista,
-            acompanhante: acompanhante,
-            veiculo: viaSelecionada.veiculo,
-            modelo: viaSelecionada.modelo,
-            placa: viaSelecionada.placa,
-            saida: saida,
-            destino: destino,
-            tipoServico: tipoServico,
-            kmInicial: kmIni,
-            kmFinal: kmFin,
-            kmRodado: kmRodado,
-            horaSaida: horaSaida,
-            horaChegada: horaChegada,
-            tempoUso: tempoUso,
-            status: status
+        const salvarNovaSaida = () => {
+            const dadosAtuais = carregarDados();
+
+            const novaViagem = {
+                id: Date.now(),
+                fct: fct.toUpperCase(),
+                data: dataBr,
+                dataChegada: dataChegadaBr,
+                motorista: motorista,
+                acompanhante: acompanhante,
+                veiculo: viaSelecionada.veiculo,
+                modelo: viaSelecionada.modelo,
+                placa: viaSelecionada.placa,
+                saida: saida,
+                destino: destino,
+                tipoServico: tipoServico,
+                kmInicial: kmIni,
+                kmFinal: kmFin,
+                kmRodado: kmRodado,
+                horaSaida: horaSaida,
+                horaChegada: horaChegada,
+                tempoUso: tempoUso,
+                status: status
+            };
+
+            dadosAtuais.viagensFCT.push(novaViagem);
+            salvarDados(dadosAtuais);
+
+            // Obter valor do checkbox ANTES de resetar o formulário
+            const checkAbas = document.getElementById('temAbastecimento');
+            const temAbastecimento = checkAbas ? checkAbas.checked : false;
+
+            // Reset form
+            document.getElementById('formSaida').reset();
+            atualizarFctAuto(dadosAtuais);
+            document.getElementById('destino').style.display = 'none';
+            document.getElementById('dataSaida').valueAsDate = new Date();
+            document.getElementById('dataChegada').valueAsDate = new Date();
+            document.getElementById('kmRodado').value = '';
+            document.getElementById('tempoUso').value = '';
+
+            if (status === 'Aberta') {
+                showToast('FCT salva como Aberta! Gerando impressão...', 'success');
+                imprimirFCT(novaViagem.id);
+                switchTab('tab-historico');
+                carregarViagensNaTabela(dadosAtuais);
+            } else {
+                if (temAbastecimento) {
+                    showToast('Saída de FCT salva! Direcionando para Registrar Abastecimento...', 'success');
+                    switchTab('tab-abastecimentos');
+                    document.getElementById('absData').value = dataInput;
+                    document.getElementById('absViaturaSelect').value = viaSelecionada.placa;
+                    document.getElementById('absFct').value = fct.toUpperCase();
+                } else {
+                    showToast('Saída de FCT salva com sucesso!', 'success');
+                    switchTab('tab-historico');
+                    carregarViagensNaTabela(dadosAtuais);
+                }
+            }
         };
 
-        dados.viagensFCT.push(novaViagem);
-        salvarDados(dados);
-
-        // Obter valor do checkbox ANTES de resetar o formulário
-        const checkAbas = document.getElementById('temAbastecimento');
-        const temAbastecimento = checkAbas ? checkAbas.checked : false;
-
-        // Reset form
-        document.getElementById('formSaida').reset();
-        atualizarFctAuto(dados);
-        document.getElementById('destino').style.display = 'none';
-        document.getElementById('dataSaida').valueAsDate = new Date();
-        document.getElementById('dataChegada').valueAsDate = new Date();
-        document.getElementById('kmRodado').value = '';
-        document.getElementById('tempoUso').value = '';
-
-        if (status === 'Aberta') {
-            showToast('FCT salva como Aberta! Gerando impressão...', 'success');
-            imprimirFCT(novaViagem.id);
-            switchTab('tab-historico');
-            carregarViagensNaTabela(dados);
-        } else {
-            if (temAbastecimento) {
-                showToast('Saída de FCT salva! Direcionando para Registrar Abastecimento...', 'success');
-                switchTab('tab-abastecimentos');
-                document.getElementById('absData').value = dataInput;
-                document.getElementById('absViaturaSelect').value = viaSelecionada.placa;
-                document.getElementById('absFct').value = fct.toUpperCase();
-            } else {
-                showToast('Saída de FCT salva com sucesso!', 'success');
-                switchTab('tab-historico');
-                carregarViagensNaTabela(dados);
-            }
+        // Veículo já em uso (outra FCT em aberto): só um administrador
+        // master pode autorizar uma segunda saída para o mesmo veículo.
+        const fctAbertaMesmoVeiculo = dados.viagensFCT.find(v =>
+            v.status === 'Aberta' && v.placa.trim().toUpperCase() === viaSelecionada.placa.trim().toUpperCase()
+        );
+        if (fctAbertaMesmoVeiculo) {
+            pedirSenhaMaster(
+                `O veículo ${viaSelecionada.veiculo} ${viaSelecionada.modelo} (${viaSelecionada.placa}) já está com a FCT ${fctAbertaMesmoVeiculo.fct} em aberto. Só um administrador master pode autorizar outra saída para o mesmo veículo.`,
+                salvarNovaSaida
+            );
+            return;
         }
+
+        salvarNovaSaida();
     }
 
     function abrirModalEncerrarFCT(id) {
