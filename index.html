@@ -9596,14 +9596,19 @@ function carregarTabelaOleo(dados) {
         const dados = carregarDados();
         if(!dados.usuarios) dados.usuarios = [{ login: "master", nome: "Administrador Master", senha: btoa("123456"), nivel: "Master" }];
 
-        const user = dados.usuarios.find(u => u.login.toLowerCase() === loginInput.toLowerCase() && u.senha === btoa(passInput));
+        const user = dados.usuarios.find(u => u.login.toLowerCase() === loginInput.toLowerCase());
 
-        if (user) {
-            usuarioLogado = user;
-            iniciarSistemaAutenticado(dados);
-        } else {
-            showToast('Usuário ou senha incorretos!', 'error');
+        if (!user) {
+            showToast('Usuário não encontrado!', 'error');
+            return;
         }
+        if (user.senha !== btoa(passInput)) {
+            showToast('Senha incorreta!', 'error');
+            return;
+        }
+
+        usuarioLogado = user;
+        iniciarSistemaAutenticado(dados);
     }
 
     function iniciarSistemaAutenticado(dados) {
