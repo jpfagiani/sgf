@@ -4,6 +4,9 @@ sgf_dados.json.bak
 *.db
 backups/
 
+# Identidade da unidade — gerado pelo instalador, específico de cada instalação
+unidade.conf
+
 # Segredos e logs
 secret.key
 *.log

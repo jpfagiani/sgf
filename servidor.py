@@ -7,8 +7,38 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 PORT = 5000
-DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sgf_dados.json')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, 'sgf_dados.json')
+UNIDADE_CONF = os.path.join(BASE_DIR, 'unidade.conf')
 db_lock = threading.Lock()
+
+# Nome da unidade fica FORA do index.html e fora do git — nada de editar o
+# HTML por unidade. O instalador escreve unidade.conf (texto simples,
+# UNIDADE_NOME=valor por linha); sem o arquivo, cai nos valores da unidade
+# onde o SGF nasceu, só para uma instalação de teste não ficar em branco.
+_UNIDADE_PADRAO = {
+    'UNIDADE_NOME': 'Centro de Detenção Provisória de Nova Independência',
+    'UNIDADE_CIDADE_UF': 'Nova Independência/SP',
+    'UNIDADE_COORDENADORIA': 'Coordenadoria das Unidades Prisionais da Região Oeste do Estado',
+}
+
+def carregar_config_unidade():
+    valores = dict(_UNIDADE_PADRAO)
+    try:
+        with open(UNIDADE_CONF, 'r', encoding='utf-8') as f:
+            for linha in f:
+                linha = linha.strip()
+                if not linha or linha.startswith('#') or '=' not in linha:
+                    continue
+                chave, _, valor = linha.partition('=')
+                valores[chave.strip()] = valor.strip()
+    except FileNotFoundError:
+        pass
+    # Derivadas, não configuráveis: os documentos impressos (FCT, Ordem de
+    # Saída) seguem a convenção de cabeçalho institucional em caixa alta.
+    valores['UNIDADE_NOME_MAIUSCULA'] = valores['UNIDADE_NOME'].upper()
+    valores['UNIDADE_CIDADE_UF_MAIUSCULA'] = valores['UNIDADE_CIDADE_UF'].upper()
+    return valores
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -124,8 +154,19 @@ class SGFRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', content_type)
             self.end_headers()
-            with open(file_path, 'rb') as f:
-                self.wfile.write(f.read())
+            if filename == 'index.html':
+                # index.html é o mesmo em toda unidade — o nome que aparece
+                # na tela vem de fora, trocado aqui na leitura. Assim o
+                # arquivo nunca precisa ser editado por unidade, e um
+                # 'git pull' nunca conflita com essa personalização.
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    conteudo = f.read()
+                for chave, valor in carregar_config_unidade().items():
+                    conteudo = conteudo.replace('{{' + chave + '}}', valor)
+                self.wfile.write(conteudo.encode('utf-8'))
+            else:
+                with open(file_path, 'rb') as f:
+                    self.wfile.write(f.read())
         else:
             self.send_error(404, "Arquivo não encontrado")
 

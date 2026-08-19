@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gerenciamento de Frota - Centro de Detenção Provisória de Nova Independência/SP</title>
+    <title>Sistema de Gerenciamento de Frota - {{UNIDADE_CIDADE_UF}}</title>
     <!-- FontAwesome para ícones profissionais -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1474,7 +1474,7 @@
                     <span id="info-nivel-user" class="sgf-nivel">...</span>
                 </div>
             </div>
-            <p class="sgf-org">Centro de Detenção Provisória<br>de Nova Independência/SP</p>
+            <p class="sgf-org" id="sgf-org-nome">{{UNIDADE_NOME}}</p>
         </div>
         <div class="sidebar-nav tabs-navigation">
 
@@ -1835,7 +1835,7 @@
             <div style="display:grid; grid-template-columns:1fr; gap:14px 24px; margin-bottom:20px;">
                 <div class="form-group">
                     <label>DO. (Remetente) *</label>
-                    <input type="text" id="romDo" value="CENTRO DE DETENÇÃO PROVISÓRIA DE NOVA INDEPENDÊNCIA/SP - INFRAESTRUTURA" required>
+                    <input type="text" id="romDo" value="{{UNIDADE_NOME_MAIUSCULA}}/SP - INFRAESTRUTURA" required>
                 </div>
                 <div class="form-group">
                     <label>PARA. (Destinatário) *</label>
@@ -2166,7 +2166,7 @@
                         </div>
                         <div class="form-group">
                             <label for="cadPatrimonio">Patrimônio</label>
-                            <input type="text" id="cadPatrimonio" placeholder="Ex: CDPNI 3">
+                            <input type="text" id="cadPatrimonio" placeholder="Ex: Patrimônio 003">
                         </div>
                         <div class="form-group">
                             <label for="cadGrupo">Grupo</label>
@@ -5906,12 +5906,6 @@
         const via = dados.viaturas.find(viatura => viatura.placa.trim().toUpperCase() === v.placa.trim().toUpperCase()) || {};
         let viaPatrimonio = via.patrimonio || '';
         let viaGrupo = via.grupo || '';
-        if (!viaPatrimonio && v.placa.includes('1B28')) {
-            viaPatrimonio = 'CDPNI 3';
-        }
-        if (!viaGrupo && v.placa.includes('1B28')) {
-            viaGrupo = 'S4';
-        }
 
         // Buscar abastecimento
         const absList = dados.abastecimentos.filter(a => 
@@ -6163,7 +6157,7 @@
                             <div class="fct-header-text">
                                 <div>GOVERNO DO ESTADO DE SÃO PAULO</div>
                                 <div>SECRETARIA DA ADMINISTRAÇÃO PENITENCIÁRIA</div>
-                                <div>CENTRO DE DETENÇÃO PROVISÓRIA DE NOVA INDEPENDÊNCIA</div>
+                                <div>{{UNIDADE_NOME_MAIUSCULA}}</div>
                                 <div class="fct-header-title">FICHA DE CONTROLE DE TRÁFEGO (FCT)</div>
                             </div>
                             <div style="border-left: 1px solid #000; padding-left: 8px; font-weight: bold; font-size: 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 90px; height: 38px;">
@@ -6565,8 +6559,8 @@
                 <div class="osv-header">
                     <div class="osv-header-text">
                         <div class="maior">SECRETARIA DA ADMINISTRAÇÃO PENITENCIÁRIA</div>
-                        <div>Coordenadoria das Unidades Prisionais da Região Oeste do Estado</div>
-                        <div>CENTRO DE DETENÇÃO PROVISÓRIA DE NOVA INDEPENDÊNCIA</div>
+                        <div>{{UNIDADE_COORDENADORIA}}</div>
+                        <div>{{UNIDADE_NOME_MAIUSCULA}}</div>
                     </div>
                     <img src="logo.png" class="osv-logo" alt="Logo">
                 </div>
@@ -6585,7 +6579,7 @@
                 </div>
 
                 <div class="osv-local-data">
-                    NOVA INDEPENDÊNCIA/SP &nbsp;&nbsp; ${dataExtenso}
+                    {{UNIDADE_CIDADE_UF_MAIUSCULA}} &nbsp;&nbsp; ${dataExtenso}
                 </div>
 
                 <div class="osv-acomp">
@@ -7078,7 +7072,7 @@
                 <div style="margin-top: 40px; width: 100%; page-break-inside: avoid;">
                     <!-- Data: alinhada à esquerda -->
                     <div style="text-align: left; font-size: 12.5px; font-weight: bold; margin-bottom: 30px;">
-                        Nova Independência, ${new Date().toLocaleDateString('pt-BR', {day: 'numeric'})} de ${new Date().toLocaleDateString('pt-BR', {month: 'long'})} de ${new Date().getFullYear()}
+                        {{UNIDADE_CIDADE_UF}}, ${new Date().toLocaleDateString('pt-BR', {day: 'numeric'})} de ${new Date().toLocaleDateString('pt-BR', {month: 'long'})} de ${new Date().getFullYear()}
                     </div>
 
                     <!-- CIENTE: alinhado à esquerda -->
@@ -7187,7 +7181,7 @@
         document.getElementById('romNum').value = calcularProximoNumeroRomaneio();
         document.getElementById('romMalote').value = '';
         document.getElementById('romLacre').value = '';
-        document.getElementById('romDo').value = 'CENTRO DE DETENÇÃO PROVISÓRIA DE NOVA INDEPENDÊNCIA/SP - INFRAESTRUTURA';
+        document.getElementById('romDo').value = '{{UNIDADE_NOME_MAIUSCULA}}/SP - INFRAESTRUTURA';
         document.getElementById('romPara').value = 'COORDENADORIA DE EXECUÇÕES PENAIS DA REGIÃO OESTE - INFRAESTRUTURA';
         document.getElementById('romItemRemessa').value = '';
         document.getElementById('romItemSetor').value = '';
