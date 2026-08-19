@@ -127,7 +127,17 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            /* Rolagem fina e discreta — só aparece nos raros casos em que a
+               janela é baixa demais para as 5 categorias caberem inteiras.
+               A barra grossa com setas (padrão do Windows) era o sintoma
+               visível de quando o .sidebar-footer "roubava" a altura desta
+               área via margin-top:auto — removido junto com esta mudança. */
+            scrollbar-width: thin;
+            scrollbar-color: #bae6fd transparent;
         }
+        .sidebar-nav::-webkit-scrollbar { width: 6px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background-color: #bae6fd; border-radius: 3px; }
 
         .sidebar-footer {
             padding: 16px;
@@ -335,37 +345,48 @@
             border-color: var(--primary);
         }
 
-        /* Submenus da Sidebar */
+        /* Submenus da Sidebar — as 5 categorias vivem dentro de UM bloco só
+           (.menu-categories-block, contorno único), não como cartões
+           separados com espaço entre eles. Cada cabeçalho é só uma linha
+           desse bloco; a divisória fica no .menu-category (não no botão),
+           para não criar um risco duplo quando o submenu está aberto. */
+        .menu-categories-block {
+            border: 1px solid #bae6fd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .menu-category:not(:last-child) {
+            border-bottom: 1px solid var(--border);
+        }
+
         .menu-header-button {
             display: flex;
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            background: rgba(56, 189, 248, .06);
-            border: 1px solid var(--border);
+            background: transparent;
+            border: none;
             padding: 12px 16px;
             font-size: 14px;
             font-weight: 600;
             color: var(--text-muted);
             cursor: pointer;
             transition: all 0.2s ease;
-            border-radius: 10px;
             text-align: left;
-            margin-bottom: 2px;
         }
 
         .menu-header-button:hover {
             color: var(--text-main);
             background-color: #e0f2fe;
-            border-color: #38bdf8;
         }
 
-        /* Estado aberto: mesma cor de contorno do preenchimento dos itens
-           ativos, para o cabeçalho ler como "grupo expandido", não só hover. */
+        /* Estado aberto: mesmo preenchimento do hover, mais o texto na cor
+           de destaque, para o cabeçalho ler como "grupo expandido". */
         .menu-header-button.active-header {
             color: var(--primary);
             background-color: #e0f2fe;
-            border-color: var(--primary);
         }
 
         .menu-header-button span {
@@ -1464,6 +1485,8 @@
         </div>
         <div class="sidebar-nav tabs-navigation">
             
+            <div class="menu-categories-block">
+
             <!-- CATEGORIA 1: TRÂNSITO DE VIATURAS -->
             <div class="menu-category">
                 <button type="button" class="menu-header-button" onclick="toggleSubmenu('submenu-transito')">
@@ -1565,8 +1588,10 @@
                 </div>
             </div>
 
+            </div>
+
         </div>
-        <div class="sidebar-footer header-btns" style="padding: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+        <div class="sidebar-footer header-btns" style="padding: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
             <button class="btn-header" id="btn-tab-usuarios" onclick="switchTab('tab-usuarios')"><i class="fa-solid fa-users-gear"></i> Gerenciar Usuários</button>
             <button class="btn-header" onclick="exportarBackup()"><i class="fa-solid fa-download"></i> Backup</button>
             <button class="btn-header" onclick="document.getElementById('input-backup').click()"><i class="fa-solid fa-upload"></i> Restaurar</button>
