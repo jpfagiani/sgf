@@ -197,7 +197,7 @@ _NOME_ANTERIOR=""
 [ -f "${DEST}/unidade.conf" ] && _NOME_ANTERIOR=$(awk -F= '/^UNIDADE_NOME=/{print $2}' "${DEST}/unidade.conf" 2>/dev/null)
 
 while true; do
-    ask "Nome completo da unidade [${_NOME_ANTERIOR:-Ex: Centro de Detenção Provisória de Franco da Rocha}]:"
+    ask "Nome completo da unidade [${_NOME_ANTERIOR:-Ex: Centro de Detenção Provisória de Nova Independência}]:"
     read -rp "  > " UNIDADE_NOME
     UNIDADE_NOME="${UNIDADE_NOME:-$_NOME_ANTERIOR}"
     [ -n "$UNIDADE_NOME" ] && break
@@ -206,7 +206,7 @@ done
 
 _CIDADE_ANTERIOR=""
 [ -f "${DEST}/unidade.conf" ] && _CIDADE_ANTERIOR=$(awk -F= '/^UNIDADE_CIDADE_UF=/{print $2}' "${DEST}/unidade.conf" 2>/dev/null)
-ask "Cidade/UF (para os impressos) [${_CIDADE_ANTERIOR:-Ex: Franco da Rocha/SP}]:"
+ask "Cidade/UF (para os impressos) [${_CIDADE_ANTERIOR:-Ex: Nova Independência/SP}]:"
 read -rp "  > " UNIDADE_CIDADE_UF
 UNIDADE_CIDADE_UF="${UNIDADE_CIDADE_UF:-${_CIDADE_ANTERIOR:-$UNIDADE_NOME/SP}}"
 

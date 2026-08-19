@@ -142,8 +142,7 @@
         .sidebar-nav::-webkit-scrollbar-thumb { background-color: #bae6fd; border-radius: 3px; }
 
         .sidebar-footer {
-            padding: 16px;
-            border-top: 1px solid var(--border);
+            padding: 16px 12px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -1580,7 +1579,7 @@
             </div>
 
         </div>
-        <div class="sidebar-footer header-btns" style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <div class="sidebar-footer header-btns">
             <button class="btn-header" id="btn-tab-usuarios" onclick="switchTab('tab-usuarios')"><i class="fa-solid fa-users-gear"></i> Gerenciar Usuários</button>
             <button class="btn-header" onclick="exportarBackup()"><i class="fa-solid fa-download"></i> Backup</button>
             <button class="btn-header" onclick="document.getElementById('input-backup').click()"><i class="fa-solid fa-upload"></i> Restaurar</button>
