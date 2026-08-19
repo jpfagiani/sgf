@@ -6530,24 +6530,30 @@
                     .osv-boxes {
                         display: grid;
                         grid-template-columns: 1fr 1fr;
-                        gap: 16px;
+                        gap: 10px 16px;
                         margin-top: 26px;
+                    }
+                    /* "Diretor Responsável" fica fora da caixa, só acima da
+                       coluna da direita — como no impresso original. Dentro
+                       da caixa ele inflava a altura só do lado direito e,
+                       por causa do stretch padrão do grid, a caixa da
+                       esquerda esticava junto para acompanhar, sobrando
+                       espaço em branco nas duas. */
+                    .osv-boxes .osv-box-title {
+                        text-align: center;
+                        font-weight: bold;
+                        border-bottom: 1px solid #000;
+                        padding-bottom: 6px;
+                        align-self: end;
                     }
                     .osv-box {
                         border: 1px solid #000;
                         padding: 12px;
                         font-size: 12.5px;
                     }
-                    .osv-box .osv-box-title {
-                        text-align: center;
-                        font-weight: bold;
-                        border-bottom: 1px solid #000;
-                        padding-bottom: 6px;
-                        margin-bottom: 10px;
-                    }
                     .osv-box p { margin: 10px 0; }
                     .osv-assinatura {
-                        margin-top: 34px;
+                        margin-top: 22px;
                         border-top: 1px solid #000;
                         text-align: center;
                         font-size: 11px;
@@ -6592,13 +6598,14 @@
                 </div>
 
                 <div class="osv-boxes">
+                    <div></div>
+                    <div class="osv-box-title">Diretor Responsável</div>
                     <div class="osv-box">
                         <p>SAÍDA EM ____/____/______</p>
                         <p>HORÁRIO: ______________</p>
                         <div class="osv-assinatura">Ass. Fun. Sub-Portaria</div>
                     </div>
                     <div class="osv-box">
-                        <div class="osv-box-title">Diretor Responsável</div>
                         <p>RETORNO EM ____/____/______</p>
                         <p>HORÁRIO: ______________</p>
                         <div class="osv-assinatura">Ass. Fun. Sub-Portaria</div>
