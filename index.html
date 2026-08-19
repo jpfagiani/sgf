@@ -9677,25 +9677,33 @@ function carregarTabelaOleo(dados) {
 
     function fazerLogin(event) {
         event.preventDefault();
-        const loginInput = document.getElementById('loginUser').value.trim();
-        const passInput = document.getElementById('loginPass').value;
+        // Blindado com try/catch: qualquer erro inesperado (ex.: um
+        // registro de usuário corrompido no banco) tem que aparecer como
+        // aviso na tela — nunca falhar em silêncio, sem nada acontecer.
+        try {
+            const loginInput = document.getElementById('loginUser').value.trim();
+            const passInput = document.getElementById('loginPass').value;
 
-        const dados = carregarDados();
-        if(!dados.usuarios) dados.usuarios = [{ login: "master", nome: "Administrador Master", senha: senhaHash("123456"), nivel: "Master" }];
+            const dados = carregarDados();
+            if(!dados.usuarios) dados.usuarios = [{ login: "master", nome: "Administrador Master", senha: senhaHash("123456"), nivel: "Master" }];
 
-        const user = dados.usuarios.find(u => u.login.toLowerCase() === loginInput.toLowerCase());
+            const user = dados.usuarios.find(u => u && typeof u.login === 'string' && u.login.toLowerCase() === loginInput.toLowerCase());
 
-        if (!user) {
-            showToast('Usuário não encontrado!', 'error');
-            return;
+            if (!user) {
+                showToast('Usuário não encontrado!', 'error');
+                return;
+            }
+            if (user.senha !== senhaHash(passInput)) {
+                showToast('Senha incorreta!', 'error');
+                return;
+            }
+
+            usuarioLogado = user;
+            iniciarSistemaAutenticado(dados);
+        } catch (e) {
+            console.error('Erro ao processar login:', e);
+            showToast('Erro ao processar o login (veja o console, F12, para detalhes).', 'error');
         }
-        if (user.senha !== senhaHash(passInput)) {
-            showToast('Senha incorreta!', 'error');
-            return;
-        }
-
-        usuarioLogado = user;
-        iniciarSistemaAutenticado(dados);
     }
 
     function iniciarSistemaAutenticado(dados) {
