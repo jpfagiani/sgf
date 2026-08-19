@@ -311,8 +311,12 @@
         /* Abas de Navegação */
         .tabs-navigation {
             display: flex;
-            gap: 4px;
             flex-direction: column;
+            /* Sem gap aqui: esta classe só é usada junto com .sidebar-nav
+               (que já define gap: 8px) — o gap: 4px que existia aqui vinha
+               depois no CSS e, por empate de especificidade, vencia o do
+               .sidebar-nav, deixando as categorias mais coladas entre si
+               do que os botões de ação do rodapé. */
         }
 
         /* Mesmo tratamento de "pill" com contorno já usado nos botões do
