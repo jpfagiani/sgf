@@ -1,6 +1,7 @@
 # Banco de dados real — contém dados pessoais e senhas; migre manualmente
 sgf_dados.json
 sgf_dados.json.bak
+sgf_dados.json.corrompido.*
 *.db
 backups/
 

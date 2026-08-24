@@ -4,6 +4,7 @@ import shutil
 import socket
 import tempfile
 import threading
+import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 PORT = 5000
@@ -97,26 +98,43 @@ class SGFRequestHandler(BaseHTTPRequestHandler):
         path = self.path.split('?')[0]
         
         if path == '/api/dados':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.end_headers()
-            
             with db_lock:
                 if os.path.exists(DB_FILE):
                     try:
                         with open(DB_FILE, 'r', encoding='utf-8') as f:
                             data = f.read()
-                            # Validar se o JSON está integro, caso contrário reconstrói do padrão
+                            # Validar se o JSON está íntegro antes de responder.
                             json.loads(data)
-                            self.wfile.write(data.encode('utf-8'))
-                            return
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.end_headers()
+                        self.wfile.write(data.encode('utf-8'))
+                        return
                     except Exception as e:
-                        print(f"Erro ao ler banco de dados JSON: {e}. Restaurando dados padrão.")
-                
-                # Se não existir ou estiver corrompido, gera o padrão
+                        # NUNCA gerar/gravar o banco padrão por cima de um
+                        # arquivo que já existe: uma falha passageira de
+                        # leitura (disco, antivírus travando o arquivo,
+                        # etc.) já apagou o banco real duas vezes assim,
+                        # voltando tudo como instalação nova. Falha alto e
+                        # visível em vez de destruir dado silenciosamente.
+                        print(f"ERRO CRÍTICO ao ler {DB_FILE}: {e}")
+                        try:
+                            copia = f"{DB_FILE}.corrompido.{int(time.time())}"
+                            shutil.copy(DB_FILE, copia)
+                            print(f"Cópia do arquivo problemático preservada em: {copia}")
+                        except Exception as e2:
+                            print(f"Não foi possível preservar cópia do arquivo problemático: {e2}")
+                        self.send_error(500, "Banco de dados existente nao pode ser lido. Nada foi sobrescrito, veja o log do servidor.")
+                        return
+
+                # Só chega aqui se o arquivo genuinamente não existir ainda
+                # (primeira instalação de verdade).
                 default_data = obter_dados_padrao()
                 with open(DB_FILE, 'w', encoding='utf-8') as f:
                     json.dump(default_data, f, indent=2, ensure_ascii=False)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
                 self.wfile.write(json.dumps(default_data).encode('utf-8'))
             return
 
