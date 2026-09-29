@@ -808,6 +808,46 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #b45309;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .badge-secondary {
+            background-color: rgba(100, 116, 139, 0.15);
+            color: #475569;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        /* Tabela de Temporalidade — melhorias de visualização */
+        #tabelaTemporalidade td {
+            white-space: normal;
+            word-break: break-word;
+            vertical-align: top;
+            padding: 14px 16px;
+            line-height: 1.5;
+        }
+        #tabelaTemporalidade th {
+            white-space: normal;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 12px 16px;
+        }
+        #tabelaTemporalidade tbody tr:nth-child(even) td {
+            background-color: rgba(241, 245, 249, 0.6);
+        }
+        #tabelaTemporalidade tbody tr:hover td {
+            background-color: rgba(59, 130, 246, 0.06);
+        }
+
         .btn-icon {
             background: none;
             border: none;
@@ -2224,6 +2264,10 @@
                 <button type="button" class="btn-header" onclick="abrirModalRelatorioEliminacao()" title="Abrir Painel e Relatório Oficial de Caixas para Eliminação por Setor" style="margin:0; padding:8px 16px; font-size:13px; font-weight:700; background:#dc2626; color:#fff; border:none; box-shadow:0 2px 4px rgba(220,38,38,0.25);">
                     <i class="fa-solid fa-fire-flame-curved"></i> Relatório de Caixas para Eliminação
                 </button>
+                <input type="file" id="input-excel-temporalidade" accept=".xlsx, .xls, .csv" style="display: none;" onchange="processarPlanilhaTemporalidade(event)">
+                <button type="button" class="btn-header" onclick="document.getElementById('input-excel-temporalidade').click()" title="Importar documentos de uma planilha Excel (.xlsx, .xls ou .csv)" style="margin:0; padding:8px 14px; font-size:12.5px; background: var(--accent); color:#fff; border:none; font-weight:600;">
+                    <i class="fa-solid fa-file-excel"></i> Importar Planilha
+                </button>
                 <button class="btn-header" onclick="exportarTemporalidadeCSV()" title="Exportar tabela em formato CSV para Excel" style="margin:0; padding:8px 14px; font-size:12.5px; background: #10b981; color:#fff; border:none;">
                     <i class="fa-solid fa-file-excel"></i> Exportar CSV
                 </button>
@@ -2253,7 +2297,9 @@
             </div>
             <div style="min-width:190px;">
                 <select id="filtro-temp-status-elim" onchange="filtrarTabelaTemporalidade()" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background-color:var(--bg); color:var(--text-main); font-family:inherit; font-size:13px;">
-                    <option value="">Todos os Status de Eliminação</option>
+                    <option value="">Todos os Status</option>
+                    <option value="NAO_ELIMINADA">📂 Somente Ativas (Exceto Eliminadas)</option>
+                    <option value="PENDENTES">⏳ Somente Pendentes (Exceto Eliminadas e Permanentes)</option>
                     <option value="APTA">🔥 Aptas p/ Eliminação (Vencidas)</option>
                     <option value="AGUARDANDO">⏳ Aguardando Prazo (A Vencer)</option>
                     <option value="ELIMINADA">✅ Já Eliminadas</option>
@@ -2267,18 +2313,18 @@
 
         <!-- Tabela -->
         <div class="table-wrapper">
-            <table id="tabelaTemporalidade">
+            <table id="tabelaTemporalidade" style="min-width:1100px;">
                 <thead>
                     <tr>
-                        <th style="width:100px; text-align:center;">Nº Caixa</th>
-                        <th style="width:140px;">Setor</th>
-                        <th>Função / Subfunção</th>
-                        <th>Atividade / Série Documental</th>
-                        <th style="text-align:center; width:110px;">Data / Ano</th>
-                        <th style="text-align:center; width:120px;">Prazo Guarda</th>
-                        <th style="text-align:center; width:160px;">Destinação / Vencimento</th>
-                        <th>Descrição</th>
-                        <th style="text-align:center; width:125px;">Ações</th>
+                        <th style="width:90px; text-align:center;">Nº Caixa</th>
+                        <th style="width:155px;">Setor</th>
+                        <th style="width:200px;">Classificação</th>
+                        <th style="width:220px;">Série Documental</th>
+                        <th style="text-align:center; width:100px;">Ano</th>
+                        <th style="text-align:center; width:105px;">Prazo</th>
+                        <th style="text-align:center; width:165px;">Situação</th>
+                        <th style="min-width:180px;">Descrição</th>
+                        <th style="text-align:center; width:130px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -21566,7 +21612,13 @@
 
             if (statusElimFiltro) {
                 const elim = calcularDadosEliminacao(doc);
-                if (elim.status !== statusElimFiltro) return false;
+                if (statusElimFiltro === 'NAO_ELIMINADA') {
+                    if (elim.status === 'ELIMINADA') return false;
+                } else if (statusElimFiltro === 'PENDENTES') {
+                    if (elim.status === 'ELIMINADA' || elim.status === 'PERMANENTE') return false;
+                } else {
+                    if (elim.status !== statusElimFiltro) return false;
+                }
             }
 
             if (busca) {
@@ -21615,60 +21667,100 @@
             // Calcular status e destinação
             const elim = calcularDadosEliminacao(doc);
 
-            const funcStr = doc.codFuncao ? `<strong>${doc.codFuncao}</strong> - ${doc.funcao || ''}` : (doc.funcao || '—');
-            const subfuncStr = doc.codSubfuncao ? `<strong>${doc.codSubfuncao}</strong> - ${doc.subfuncao || ''}` : (doc.subfuncao || '—');
-            const ativStr = doc.codAtividade ? `<strong>${doc.codAtividade}</strong> - ${doc.atividade || ''}` : (doc.atividade || '—');
-            const serieStr = doc.codSerieDocumental ? `<strong>${doc.codSerieDocumental}</strong> - ${doc.serieDocumental || ''}` : (doc.serieDocumental || '—');
+            // --- Classificação: Função > Subfunção > Atividade (estruturada) ---
+            let classifHtml = '';
+            if (doc.funcao) {
+                classifHtml += `<div style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:3px;">`;
+                classifHtml += doc.codFuncao ? `<span style="color:#6366f1; font-family:monospace; font-size:11px; background:rgba(99,102,241,0.08); padding:1px 5px; border-radius:3px; margin-right:5px;">${doc.codFuncao}</span>` : '';
+                classifHtml += `${doc.funcao}</div>`;
+            }
+            if (doc.subfuncao) {
+                classifHtml += `<div style="font-size:12px; color:var(--text-muted); padding-left:8px; border-left:2px solid #e2e8f0; margin-top:2px;">`;
+                classifHtml += doc.codSubfuncao ? `<span style="font-family:monospace; font-size:10.5px; color:#64748b; margin-right:4px;">${doc.codSubfuncao}</span> ` : '';
+                classifHtml += `${doc.subfuncao}</div>`;
+            }
+            if (doc.atividade) {
+                classifHtml += `<div style="font-size:11.5px; color:#64748b; padding-left:16px; border-left:2px solid #f1f5f9; margin-top:2px;">`;
+                classifHtml += doc.codAtividade ? `<span style="font-family:monospace; font-size:10.5px; margin-right:4px;">${doc.codAtividade}</span> ` : '';
+                classifHtml += `${doc.atividade}</div>`;
+            }
+            if (!classifHtml) classifHtml = '<span style="color:#94a3b8;">—</span>';
 
-            const descResumo = (doc.descricao && doc.descricao.length > 55) ? doc.descricao.substring(0, 52) + '...' : (doc.descricao || '—');
-            const setorStr = doc.setor ? `<span style="font-weight:600; color:#1e293b; font-size:12px;">${doc.setor}</span>` : `<span style="color:#94a3b8; font-style:italic;">Geral</span>`;
+            // --- Série Documental ---
+            let serieHtml = '';
+            if (doc.serieDocumental) {
+                serieHtml = `<div style="font-size:13px; font-weight:600; color:var(--text-main);">`;
+                if (doc.codSerieDocumental) {
+                    serieHtml += `<div style="font-family:monospace; font-size:11px; color:#0284c7; background:rgba(2,132,199,0.08); padding:1px 6px; border-radius:3px; display:inline-block; margin-bottom:3px;">${doc.codSerieDocumental}</div><br>`;
+                }
+                serieHtml += `${doc.serieDocumental}</div>`;
+            } else {
+                serieHtml = '<span style="color:#94a3b8;">—</span>';
+            }
+
+            // --- Descrição expandida ---
+            const descMax = 120;
+            const descTexto = doc.descricao || '';
+            const descResumo = descTexto.length > descMax ? descTexto.substring(0, descMax - 3) + '...' : (descTexto || '—');
+
+            // --- Setor formatado ---
+            const setorStr = doc.setor
+                ? `<span style="font-weight:600; color:#1e293b; font-size:13px; line-height:1.4;">${doc.setor}</span>`
+                : `<span style="color:#94a3b8; font-style:italic; font-size:12px;">Geral</span>`;
+
+            // --- Destinação / Situação com ícone ---
+            let destinacaoHtml = '';
+            const destFinal = doc.destinacaoFinal || '';
+            if (destFinal) {
+                destinacaoHtml += `<div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">${destFinal}</div>`;
+            }
+            destinacaoHtml += `<span class="${elim.badgeClass}" style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:700; line-height:1.3;">${elim.statusLabel}</span>`;
+
+            // Destaque visual para caixas aptas para eliminação
+            if (elim.status === 'APTA') {
+                tr.style.background = 'rgba(254,226,226,0.35)';
+            }
 
             let btnAcaoEliminacao = '';
             if (elim.status === 'APTA') {
                 btnAcaoEliminacao = `
-                    <button type="button" class="btn-icon" onclick="abrirModalBaixaEliminacao('${doc.id}')" title="Registrar Eliminação desta Caixa" style="color: #dc2626; background: rgba(220,38,38,0.1); border-radius: 4px; border: none; cursor: pointer; padding: 4px 6px;">
+                    <button type="button" class="btn-icon" onclick="abrirModalBaixaEliminacao('${doc.id}')" title="Registrar Eliminação desta Caixa" style="color:#fff; background:#dc2626; border-radius:5px; border:none; cursor:pointer; padding:5px 7px; font-size:13px;">
                         <i class="fa-solid fa-stamp"></i>
                     </button>
                 `;
             }
 
             tr.innerHTML = `
-                <td style="text-align: center; font-weight: 700;">
-                    <span style="background: rgba(37,99,235,0.1); color: #1d4ed8; padding: 4px 8px; border-radius: 6px; display: inline-block; font-size: 12px; font-family: monospace;">
+                <td style="text-align:center; vertical-align:middle;">
+                    <span style="background:rgba(37,99,235,0.1); color:#1d4ed8; padding:5px 10px; border-radius:6px; display:inline-block; font-size:13px; font-weight:700; font-family:monospace; letter-spacing:0.5px;">
                         ${doc.numeroCaixa || '—'}
                     </span>
                 </td>
                 <td>${setorStr}</td>
-                <td style="font-size: 12px;">
-                    <div>${funcStr}</div>
-                    <div style="color: var(--text-muted); font-size: 11px;">${subfuncStr}</div>
+                <td>${classifHtml}</td>
+                <td>${serieHtml}</td>
+                <td style="text-align:center; font-weight:600; font-size:13px; vertical-align:middle;">${doc.dataAno || '—'}</td>
+                <td style="text-align:center; font-size:13px; vertical-align:middle;">${doc.prazoGuarda || '—'}</td>
+                <td style="text-align:center; vertical-align:middle;">
+                    ${destinacaoHtml}
                 </td>
-                <td style="font-size: 12px;">
-                    <div style="font-weight: 600; color: var(--text-main);">${serieStr}</div>
-                    <div style="color: var(--text-muted); font-size: 11px;">${ativStr}</div>
-                </td>
-                <td style="text-align: center; font-weight: 600; font-size: 12px;">${doc.dataAno || '—'}</td>
-                <td style="text-align: center; font-size: 12px;">${doc.prazoGuarda || '—'}</td>
-                <td style="text-align: center;">
-                    <span class="${elim.badgeClass}" style="display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:700;">
-                        ${elim.statusLabel}
-                    </span>
-                </td>
-                <td title="${(doc.descricao || '').replace(/"/g, '&quot;')}" style="font-size: 11.5px; color: var(--text-main);">${descResumo}</td>
-                <td style="text-align: center; white-space: nowrap;">
-                    <button type="button" class="btn-icon" onclick="visualizarFichaTemporalidade('${doc.id}')" title="Visualizar Ficha Completa" style="color: var(--primary); background: transparent; border: none; cursor: pointer; padding: 4px 6px;">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                    ${btnAcaoEliminacao}
-                    <button type="button" class="btn-icon" onclick="editarDocumentoTemporalidade('${doc.id}')" title="Editar Documento" style="color: var(--secondary); background: transparent; border: none; cursor: pointer; padding: 4px 6px;">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button type="button" class="btn-icon" onclick="abrirModalEtiquetaCaixa('${(doc.numeroCaixa || '').replace(/'/g, "\\'")}')" title="Gerar Etiqueta desta Caixa" style="color: #6366f1; background: transparent; border: none; cursor: pointer; padding: 4px 6px;">
-                        <i class="fa-solid fa-tag"></i>
-                    </button>
-                    <button type="button" class="btn-icon-danger" onclick="excluirDocumentoTemporalidade('${doc.id}')" title="Excluir Registro" style="color: var(--danger); background: transparent; border: none; cursor: pointer; padding: 4px 6px;">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                <td title="${descTexto.replace(/"/g, '&quot;')}" style="font-size:12.5px; color:var(--text-main); line-height:1.5;">${descResumo}</td>
+                <td style="text-align:center; white-space:nowrap; vertical-align:middle;">
+                    <div style="display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn-icon" onclick="visualizarFichaTemporalidade('${doc.id}')" title="Visualizar Ficha Completa" style="color:var(--primary); background:rgba(37,99,235,0.08); border:none; cursor:pointer; padding:5px 7px; border-radius:5px; font-size:13px;">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        ${btnAcaoEliminacao}
+                        <button type="button" class="btn-icon" onclick="editarDocumentoTemporalidade('${doc.id}')" title="Editar Documento" style="color:var(--secondary); background:rgba(2,132,199,0.08); border:none; cursor:pointer; padding:5px 7px; border-radius:5px; font-size:13px;">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button type="button" class="btn-icon" onclick="abrirModalEtiquetaCaixa('${(doc.numeroCaixa || '').replace(/'/g, "\\'")}')" title="Gerar Etiqueta desta Caixa" style="color:#6366f1; background:rgba(99,102,241,0.08); border:none; cursor:pointer; padding:5px 7px; border-radius:5px; font-size:13px;">
+                            <i class="fa-solid fa-tag"></i>
+                        </button>
+                        <button type="button" class="btn-icon-danger" onclick="excluirDocumentoTemporalidade('${doc.id}')" title="Excluir Registro" style="color:var(--danger); background:rgba(220,38,38,0.08); border:none; cursor:pointer; padding:5px 7px; border-radius:5px; font-size:13px;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -22901,6 +22993,220 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast('Tabela de Temporalidade exportada em CSV com sucesso!', 'success');
+    }
+
+    // --- IMPORTAR DOCUMENTOS DA TEMPORALIDADE VIA EXCEL ---
+    function processarPlanilhaTemporalidade(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
+                if (!rows || rows.length === 0) {
+                    showToast('Planilha vazia ou em formato inválido.', 'error');
+                    return;
+                }
+
+                // Procurar linha de cabeçalho (busca nas primeiras 15 linhas)
+                let headerIndex = -1;
+                for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                    const rowCells = rows[i].map(c => String(c).trim().toUpperCase());
+                    if (rowCells.some(cell =>
+                        cell.includes("CAIXA") ||
+                        cell.includes("SÉRIE") || cell.includes("SERIE") ||
+                        cell.includes("FUNÇÃO") || cell.includes("FUNCAO") ||
+                        cell.includes("TEMPORALIDADE") ||
+                        cell.includes("DESTINAÇÃO") || cell.includes("DESTINACAO") ||
+                        cell.includes("PRAZO") ||
+                        cell.includes("SETOR")
+                    )) {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                // Mapear índices das colunas por nome do cabeçalho
+                let caixaIdx = -1, setorIdx = -1, dataAnoIdx = -1, prazoIdx = -1, destinacaoIdx = -1;
+                let codFuncaoIdx = -1, funcaoIdx = -1, codSubfuncaoIdx = -1, subfuncaoIdx = -1;
+                let codAtividadeIdx = -1, atividadeIdx = -1, codSerieIdx = -1, serieIdx = -1;
+                let descricaoIdx = -1;
+
+                if (headerIndex !== -1) {
+                    const headers = rows[headerIndex].map(c => String(c).trim().toUpperCase());
+
+                    caixaIdx = headers.findIndex(h => h.includes("CAIXA") || h.includes("Nº") || h.includes("NUMERO") || h.includes("NÚMERO") || h === "NR" || h === "CX");
+                    setorIdx = headers.findIndex(h => h.includes("SETOR") || h.includes("UNIDADE PRODUTORA") || h.includes("UNIDADE") || h.includes("PRODUTOR") || h.includes("LOTAÇÃO") || h.includes("LOTACAO") || h.includes("DEPARTAMENTO"));
+                    dataAnoIdx = headers.findIndex(h => h.includes("DATA") || h.includes("ANO") || h.includes("PERÍODO") || h.includes("PERIODO"));
+                    prazoIdx = headers.findIndex(h => h.includes("PRAZO") || h.includes("GUARDA") || h.includes("RETENÇÃO") || h.includes("RETENCAO"));
+                    destinacaoIdx = headers.findIndex(h => h.includes("DESTINAÇÃO") || h.includes("DESTINACAO") || h.includes("DESTINO") || h.includes("FINAL"));
+                    codFuncaoIdx = headers.findIndex(h => (h.includes("CÓD") || h.includes("COD") || h.includes("CÓDIGO") || h.includes("CODIGO")) && h.includes("FUN"));
+                    funcaoIdx = headers.findIndex(h => (h.includes("FUNÇÃO") || h.includes("FUNCAO")) && !h.includes("CÓD") && !h.includes("COD") && !h.includes("SUB"));
+                    codSubfuncaoIdx = headers.findIndex(h => (h.includes("CÓD") || h.includes("COD") || h.includes("CÓDIGO") || h.includes("CODIGO")) && (h.includes("SUB")));
+                    subfuncaoIdx = headers.findIndex(h => (h.includes("SUBFUNÇÃO") || h.includes("SUBFUNCAO") || h.includes("SUB FUNÇÃO") || h.includes("SUB FUNCAO") || h.includes("SUB-FUNÇÃO") || h.includes("SUB-FUNCAO")) && !h.includes("CÓD") && !h.includes("COD"));
+                    codAtividadeIdx = headers.findIndex(h => (h.includes("CÓD") || h.includes("COD") || h.includes("CÓDIGO") || h.includes("CODIGO")) && h.includes("ATIVID"));
+                    atividadeIdx = headers.findIndex(h => h.includes("ATIVIDADE") && !h.includes("CÓD") && !h.includes("COD") && !h.includes("CÓDIGO") && !h.includes("CODIGO"));
+                    codSerieIdx = headers.findIndex(h => (h.includes("CÓD") || h.includes("COD") || h.includes("CÓDIGO") || h.includes("CODIGO")) && (h.includes("SÉRIE") || h.includes("SERIE")));
+                    serieIdx = headers.findIndex(h => (h.includes("SÉRIE") || h.includes("SERIE")) && !h.includes("CÓD") && !h.includes("COD") && !h.includes("CÓDIGO") && !h.includes("CODIGO"));
+                    descricaoIdx = headers.findIndex(h => h.includes("DESCRIÇÃO") || h.includes("DESCRICAO") || h.includes("OBSERV") || h.includes("OBS") || h.includes("CONTEÚDO") || h.includes("CONTEUDO") || h.includes("DETALHE"));
+                } else {
+                    // Fallback: assume ordem padrão igual ao CSV exportado
+                    // Nº Caixa;Setor;Cód. Função;Função;Cód. Subfunção;Subfunção;Cód. Atividade;Atividade;Cód. Série Documental;Série Documental;Data / Ano;Prazo de Guarda;Destinação Final;Situação / Vencimento;Descrição
+                    headerIndex = -2;
+                    caixaIdx = 0;
+                    setorIdx = 1;
+                    codFuncaoIdx = 2;
+                    funcaoIdx = 3;
+                    codSubfuncaoIdx = 4;
+                    subfuncaoIdx = 5;
+                    codAtividadeIdx = 6;
+                    atividadeIdx = 7;
+                    codSerieIdx = 8;
+                    serieIdx = 9;
+                    dataAnoIdx = 10;
+                    prazoIdx = 11;
+                    destinacaoIdx = 12;
+                    // 13 = Situação (calculada, ignorar)
+                    descricaoIdx = 14;
+                }
+
+                if (caixaIdx === -1 && serieIdx === -1 && funcaoIdx === -1) {
+                    showToast('Não foi possível identificar as colunas da planilha. Verifique se há cabeçalhos como "Caixa", "Série", "Função", "Setor", etc.', 'error');
+                    return;
+                }
+
+                const dados = carregarDados();
+                if (!dados.documentosTemporalidade) dados.documentosTemporalidade = [];
+                let importados = 0;
+                let ignorados = 0;
+                let erros = [];
+
+                const startRow = headerIndex >= 0 ? headerIndex + 1 : 0;
+                for (let i = startRow; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length === 0) continue;
+
+                    // Ler valores das colunas
+                    const getVal = (idx) => idx !== -1 && row[idx] !== undefined ? String(row[idx]).trim() : '';
+
+                    const numeroCaixa = getVal(caixaIdx);
+                    const setor = getVal(setorIdx);
+                    const dataAno = getVal(dataAnoIdx);
+                    const prazoGuarda = getVal(prazoIdx);
+                    const destinacaoFinal = getVal(destinacaoIdx);
+                    const codFuncao = getVal(codFuncaoIdx);
+                    const funcao = getVal(funcaoIdx);
+                    const codSubfuncao = getVal(codSubfuncaoIdx);
+                    const subfuncao = getVal(subfuncaoIdx);
+                    const codAtividade = getVal(codAtividadeIdx);
+                    const atividade = getVal(atividadeIdx);
+                    const codSerieDocumental = getVal(codSerieIdx);
+                    const serieDocumental = getVal(serieIdx);
+                    const descricao = getVal(descricaoIdx);
+
+                    // Ignorar linhas que parecem ser cabeçalhos repetidos
+                    if (numeroCaixa.toUpperCase() === 'Nº CAIXA' || numeroCaixa.toUpperCase() === 'CAIXA' || numeroCaixa.toUpperCase() === 'NR') continue;
+
+                    // Linha vazia (sem dados significativos)
+                    if (!numeroCaixa && !setor && !funcao && !serieDocumental && !descricao) continue;
+
+                    // Validar campos mínimos obrigatórios
+                    if (!numeroCaixa) {
+                        erros.push(`Linha ${i + 1}: Nº da Caixa não informado (ignorada).`);
+                        ignorados++;
+                        continue;
+                    }
+
+                    // Verificar duplicidade de caixa no banco existente
+                    const limpo = numeroCaixa.toUpperCase();
+                    const jaExiste = dados.documentosTemporalidade.some(d =>
+                        (d.numeroCaixa || '').trim().toUpperCase() === limpo
+                    );
+                    if (jaExiste) {
+                        erros.push(`Linha ${i + 1}: Caixa "${numeroCaixa}" já existe no sistema (ignorada).`);
+                        ignorados++;
+                        continue;
+                    }
+
+                    // Calcular ano limite de eliminação
+                    const docTemp = { dataAno, prazoGuarda, destinacaoFinal };
+                    const calcElim = calcularDadosEliminacao(docTemp);
+
+                    const novoDoc = {
+                        id: (Date.now() + i).toString(),
+                        numeroCaixa: numeroCaixa,
+                        setor: setor || '',
+                        dataAno: dataAno || '',
+                        prazoGuarda: prazoGuarda || '',
+                        destinacaoFinal: destinacaoFinal || '',
+                        codFuncao: codFuncao,
+                        funcao: funcao || '',
+                        codSubfuncao: codSubfuncao,
+                        subfuncao: subfuncao || '',
+                        codAtividade: codAtividade,
+                        atividade: atividade || '',
+                        codSerieDocumental: codSerieDocumental,
+                        serieDocumental: serieDocumental || '',
+                        descricao: descricao || '',
+                        anoLimiteEliminacao: calcElim.anoLimite,
+                        statusEliminada: false,
+                        dataEliminacao: null,
+                        termoEliminacao: null,
+                        anexoBase64: null,
+                        anexoType: null,
+                        anexoNome: null,
+                        criadoPor: (typeof usuarioLogado !== 'undefined' && usuarioLogado) ? (usuarioLogado.nome || usuarioLogado.login) : 'Importação Excel',
+                        criadoEm: new Date().toISOString()
+                    };
+
+                    dados.documentosTemporalidade.push(novoDoc);
+                    importados++;
+                }
+
+                if (importados > 0) {
+                    salvarDados(dados);
+                    carregarTabelaTemporalidade(dados);
+                    try { inicializarDropdownCatalogoSAP(); } catch(e) {}
+                }
+
+                // Montar mensagem de resultado
+                let msg = '';
+                if (importados > 0) {
+                    msg += `${importados} documento(s) importado(s) com sucesso!`;
+                }
+                if (ignorados > 0) {
+                    msg += (msg ? ' ' : '') + `${ignorados} linha(s) ignorada(s).`;
+                }
+                if (erros.length > 0 && erros.length <= 10) {
+                    msg += '\n\nDetalhes:\n' + erros.join('\n');
+                } else if (erros.length > 10) {
+                    msg += `\n\nPrimeiros 10 erros:\n` + erros.slice(0, 10).join('\n') + `\n... e mais ${erros.length - 10} aviso(s).`;
+                }
+
+                if (importados > 0) {
+                    showToast(msg, 'success');
+                } else if (ignorados > 0) {
+                    showToast(msg || 'Nenhum documento novo encontrado para importar.', 'warning');
+                } else {
+                    showToast('Nenhum documento encontrado na planilha para importar.', 'warning');
+                }
+
+                // Limpar input para permitir reimportação do mesmo arquivo
+                document.getElementById('input-excel-temporalidade').value = '';
+
+            } catch(error) {
+                console.error("Erro na importação de documentos da temporalidade:", error);
+                showToast('Erro ao ler a planilha. Verifique o formato do arquivo (.xlsx, .xls ou .csv).', 'error');
+                document.getElementById('input-excel-temporalidade').value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
     }
 
 // --- CONTROLE DE TROCA DE ÓLEO ---
