@@ -21,6 +21,8 @@ _UNIDADE_PADRAO = {
     'UNIDADE_NOME': 'Centro de Detenção Provisória de Nova Independência',
     'UNIDADE_CIDADE_UF': 'Nova Independência/SP',
     'UNIDADE_COORDENADORIA': 'Coordenadoria das Unidades Prisionais da Região Oeste do Estado',
+    'UNIDADE_CHEFE_NOME': 'RODRIGO CARLOS BORGES',
+    'UNIDADE_CHEFE_CARGO': 'Chefe de Departamento',
 }
 
 def carregar_config_unidade():
@@ -80,7 +82,9 @@ def obter_dados_padrao():
         "usuarios": [{ "login": "master", "nome": "Administrador Master", "senha": "MTIzNDU2", "nivel": "Master" }],
         "pos_sp": 0,
         "pos_interior": 0,
-        "mapaForca": []
+        "mapaForca": [],
+        "romaneios": [],
+        "documentosTemporalidade": []
     }
 
 class SGFRequestHandler(BaseHTTPRequestHandler):
@@ -225,7 +229,7 @@ def run():
     local_ip = get_local_ip()
     
     print("=" * 70)
-    print(" SGF - Sistema de Gestão de Frota está ATIVO na rede local!")
+    print(" SIGADI - Sistema Interno de Gestão Administrativa Integrada está ATIVO na rede local!")
     print("-" * 70)
     print(f" Para acessar de outros computadores da mesma rede, digite:")
     print(f" http://{local_ip}:{PORT}/")
